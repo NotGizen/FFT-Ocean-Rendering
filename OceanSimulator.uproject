@@ -25,6 +25,10 @@
 		{
 			"Name": "TriangleTest",
 			"Enabled": false
+		},
+		{
+			"Name": "ProceduralMeshComponent",
+			"Enabled": true
 		}
 	]
 }
