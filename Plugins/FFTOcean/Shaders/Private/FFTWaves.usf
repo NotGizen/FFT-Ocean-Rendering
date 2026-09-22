@@ -119,14 +119,14 @@ void MainCS(uint3 id : SV_DispatchThreadID) {
 
 	const uint lenghtScale = SPECTRUM_TEX_SIZE / 8;
 
-    //for (uint i = 0; i < 4; ++i) {
+    for (uint i = 0; i < 4; ++i) {
             float halfN = SPECTRUM_TEX_SIZE / 2.0f;
 
         float deltaK = 2.0f * PI / lenghtScale;
         float2 K = (id.xy - halfN) * deltaK;
         float kLength = length(K);
 
-        seed +=  hash(seed) * 10;
+        seed += i + hash(seed) * 10;
         float4 uniformRandSamples = float4(hash(seed), hash(seed * 2), hash(seed * 3), hash(seed * 4));
         float2 gauss1 = UniformToGaussian(uniformRandSamples.x, uniformRandSamples.y);
         float2 gauss2 = UniformToGaussian(uniformRandSamples.z, uniformRandSamples.w);
@@ -145,7 +145,7 @@ void MainCS(uint3 id : SV_DispatchThreadID) {
             OutputTexture[id.xy] = float4(float2(gauss2.x, gauss1.y) * sqrt(2 * spectrum * abs(dOmegadk) / kLength * deltaK * deltaK), 0.0f, 0.0f);
         } else {
             OutputTexture[id.xy] = 0.0f;
-       // }
+        }
     }
 }
 
