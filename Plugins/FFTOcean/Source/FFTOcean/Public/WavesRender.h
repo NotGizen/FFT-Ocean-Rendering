@@ -28,8 +28,11 @@ struct FForceFieldCSParameters
 	{
 		
 	}
-	FForceFieldCSParameters(UTextureRenderTarget2D* IORenderTarget)
+	FForceFieldCSParameters(UTextureRenderTarget2D* IORenderTarget, float InScale, float InAngle, float InSpreadBlend,
+	float InSwell, float InAlpha, float InPeakOmega, float InGamma, float InShortWavesFade)
 		: RenderTarget(IORenderTarget)
+	, Scale(InScale), Angle(InAngle), SpreadBlend(InSpreadBlend), Swell(InSwell)
+	, Alpha(InAlpha), PeakOmega(InPeakOmega), Gamma(InGamma), ShortWavesFade(InShortWavesFade)
 	{
 		CachedRenderTargetSize = RenderTarget ? FIntVector2(RenderTarget->SizeX, RenderTarget->SizeY) : FIntVector2::ZeroValue;
 	}

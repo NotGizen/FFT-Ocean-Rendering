@@ -46,28 +46,28 @@ protected:
 	UMaterialInterface* OceanBaseMat;
 	
 	//Ocean Params
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float Scale;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float Angle;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float SpreadBlend;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float Swell;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float Alpha;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float PeakOmega;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float Gamma;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float ShortWavesFade;
 
 public:	
