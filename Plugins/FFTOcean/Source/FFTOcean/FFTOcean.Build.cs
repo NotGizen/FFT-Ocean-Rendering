@@ -40,7 +40,8 @@ public class FFTOcean : ModuleRules
 				"SlateCore", 
 				"ProceduralMeshComponent",
 				"RenderCore",   
-				"RHI" 
+				"RHI" ,
+				"Projects"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

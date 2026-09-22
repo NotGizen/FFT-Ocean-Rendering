@@ -2,11 +2,15 @@
 
 #include "FFTOcean.h"
 
+#include "Interfaces/IPluginManager.h"
+
 #define LOCTEXT_NAMESPACE "FFFTOceanModule"
 
 void FFFTOceanModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
+	const FString ShaderDirectory =  FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("FFTOcean"))->GetBaseDir(), TEXT("Shaders"));
+	AddShaderSourceDirectoryMapping(FString("/CustomShaders"), ShaderDirectory);
 }
 
 void FFFTOceanModule::ShutdownModule()

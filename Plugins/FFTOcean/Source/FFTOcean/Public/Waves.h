@@ -6,7 +6,10 @@
 #include "GameFramework/Actor.h"
 #include "Waves.generated.h"
 
+#define TEXTURE_RESOLUTION 128
+
 class UProceduralMeshComponent;
+class UTextureRenderTarget2D;
 
 UCLASS()
 class AWaves : public AActor
@@ -28,11 +31,44 @@ protected:
 	float TileSize;
 	
 	UPROPERTY(EditAnywhere)
-	int32 AmountOfTiles;
+	int32 PerRowAmount;
 	
 	
-	void CreateGrid(float tileSize, int32 amount, UProceduralMeshComponent*& mesh);
-		
+	void CreateGrid(float tileSize, int32 x, int32 y, UProceduralMeshComponent*& mesh);
+	
+	UPROPERTY()
+	UTextureRenderTarget2D* HeightField;
+	
+	UPROPERTY(EditAnywhere)
+	UMaterialInstanceDynamic* OceanDynMat;
+	
+	UPROPERTY(EditAnywhere)
+	UMaterialInterface* OceanBaseMat;
+	
+	//Ocean Params
+	UPROPERTY(EditAnywhere)
+	float Scale;
+	
+	UPROPERTY(EditAnywhere)
+	float Angle;
+	
+	UPROPERTY(EditAnywhere)
+	float SpreadBlend;
+	
+	UPROPERTY(EditAnywhere)
+	float Swell;
+	
+	UPROPERTY(EditAnywhere)
+	float Alpha;
+	
+	UPROPERTY(EditAnywhere)
+	float PeakOmega;
+	
+	UPROPERTY(EditAnywhere)
+	float Gamma;
+	
+	UPROPERTY(EditAnywhere)
+	float ShortWavesFade;
 
 public:	
 	// Called every frame

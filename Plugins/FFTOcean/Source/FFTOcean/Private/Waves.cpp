@@ -2,15 +2,29 @@
 
 
 #include "Waves.h"
+#include "../Public/WavesRender.h"
 #include "ProceduralMeshComponent.h"
+#include "Engine/TextureRenderTarget2D.h"
 // Sets default values
 AWaves::AWaves()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	TileSize = 1000.f;
-	AmountOfTiles = 100;
-	int32 PerRowAmount = 10;
+	TileSize = 100.f;
+	
+	//Set default params
+	
+	Scale = 1.0;
+	Alpha = 1.0f;
+	Angle = 0.0f;
+	Gamma = 1.0f;
+	PeakOmega = 1.0f;
+	ShortWavesFade = 1.0f;
+	SpreadBlend = 1.0f;
+	Swell = 1.0f;
+	
+	
+	PerRowAmount = 10;
 	USceneComponent* SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = SceneRoot;
 	int32 NameCounter = 0;
@@ -24,38 +38,45 @@ AWaves::AWaves()
 			UProceduralMeshComponent* MeshComp = CreateDefaultSubobject<UProceduralMeshComponent>(CompName);
 			MeshComp->SetupAttachment(RootComponent);
 			MeshComp->SetRelativeLocation(FVector(i * TileSize, j * TileSize, 0.0f));
-			CreateGrid(TileSize, PerRowAmount * PerRowAmount, MeshComp);
+			CreateGrid(TileSize, i, j, MeshComp);
 			NameCounter++;
 		}
 	}
 	
-	//Static mesh (Delete later)
-	// VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	// VisualMesh->SetupAttachment(RootComponent);
-	// 	
-	// static ConstructorHelpers::FObjectFinder<UStaticMesh> PlaneVisualAsset(TEXT("/Engine/BasicShapes/Plane.Plane"));
-	// 	
-	// if (PlaneVisualAsset.Succeeded())
-	// {
-	// 	VisualMesh->SetStaticMesh(PlaneVisualAsset.Object);
-	// 	FTransform NewTransform = FTransform::Identity;
-	// 	NewTransform.SetLocation(FVector(0.0f, 0.0f, 0.0f));
-	// 	NewTransform.SetScale3D(FVector(10.0f));
-	// 	VisualMesh->SetRelativeLocation(NewTransform.GetLocation());
-	// 	VisualMesh->SetRelativeTransform(NewTransform);
-	// }
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> OceanMatFinder(
+		TEXT("/FFTOcean/M_Waves.M_Waves"));  // adjust to your actual asset path
+	if (OceanMatFinder.Succeeded())
+	{
+		OceanBaseMat = OceanMatFinder.Object;
+	}
 	
-		
+	
+	
 }
 
 // Called when the game starts or when spawned
 void AWaves::BeginPlay()
 {
 	Super::BeginPlay();
+	//Height field texture
 	
+	HeightField = NewObject<UTextureRenderTarget2D>(this);
+	HeightField->RenderTargetFormat = RTF_RGBA16f;
+	HeightField->bCanCreateUAV = true;
+	HeightField->InitAutoFormat(TEXTURE_RESOLUTION, TEXTURE_RESOLUTION);
+	HeightField->UpdateResourceImmediate();
+	
+	OceanDynMat = UMaterialInstanceDynamic::Create(OceanBaseMat, this);
+	OceanDynMat->SetTextureParameterValue(FName("HeightFieldTexture"), HeightField);
+	
+	for (UProceduralMeshComponent* Tile : Meshes)
+	{
+		Tile->SetMaterial(0, OceanDynMat);
+		UE_LOG(LogTemp, Warning, TEXT("Set material on tile: %s"), *Tile->GetName());
+	}
 }
 
-void AWaves::CreateGrid(float tileSize, int32 amount, UProceduralMeshComponent*& mesh)
+void AWaves::CreateGrid(float tileSize, int32 x, int32 y, UProceduralMeshComponent*& mesh)
 {
 	
 	
@@ -80,11 +101,17 @@ void AWaves::CreateGrid(float tileSize, int32 amount, UProceduralMeshComponent*&
 		Normals.Add(FVector(0, 0, 1)); 
 	}
 	
+	//UV
+	float U0 = (float)x / PerRowAmount;
+	float U1 = (float)(x + 1) / PerRowAmount;
+	float V0 = (float)y / PerRowAmount;
+	float V1 = (float)(y + 1) / PerRowAmount;
+
 	TArray<FVector2D> UVs;
-	UVs.Add(FVector2D(0, 0));
-	UVs.Add(FVector2D(0, 1));
-	UVs.Add(FVector2D(1, 0));
-	UVs.Add(FVector2D(1, 1));
+	UVs.Add(FVector2D(U0, V0));  // vertex 0: (0,0) corner
+	UVs.Add(FVector2D(U0, V1));  // vertex 1: (0,tileSize) corner
+	UVs.Add(FVector2D(U1, V0));  // vertex 2: (tileSize,0) corner
+	UVs.Add(FVector2D(U1, V1));  // vertex 3: (tileSize,tileSize) corner
 	
 	TArray<FColor> Colors;
 	Colors.Add(FColor(255, 0, 0, 255));
@@ -96,6 +123,7 @@ void AWaves::CreateGrid(float tileSize, int32 amount, UProceduralMeshComponent*&
 	{
 		mesh->ClearAllMeshSections();
 		mesh->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, Colors, TArray<FProcMeshTangent>(), false);
+
 		Meshes.Add(mesh);
 	}
 	
@@ -105,13 +133,10 @@ void AWaves::CreateGrid(float tileSize, int32 amount, UProceduralMeshComponent*&
 void AWaves::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	FVector NewLocation = GetActorLocation();
-	FRotator NewRotation = GetActorRotation();
-	float RunningTime = GetGameTimeSinceCreation();
-	float DeltaHeight = (FMath::Sin(RunningTime + DeltaTime) - FMath::Sin(RunningTime));
-	NewLocation.Z += DeltaHeight * 20.0f;       //Scale our height by a factor of 20
-	float DeltaRotation = DeltaTime * 20.0f;	//Rotate by 20 degrees per second
-	NewRotation.Yaw += DeltaRotation;
-	SetActorLocationAndRotation(NewLocation, NewRotation);
+	
+	
+	FForceFieldCSParameters params(HeightField);
+	
+	ForceField::Dispatch(params);
 }
 
