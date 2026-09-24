@@ -7,7 +7,7 @@
 #include "Engine/TextureRenderTargetVolume.h"
 #include "Runtime/Engine/Classes/Engine/TextureRenderTarget2D.h"
 
-struct FForceFieldCSParameters
+struct SpectrumParameters
 {
 	UTextureRenderTarget2D* RenderTarget;
 	float Scale;
@@ -24,11 +24,11 @@ struct FForceFieldCSParameters
 		return CachedRenderTargetSize;
 	}
 
-	FForceFieldCSParameters()
+	SpectrumParameters()
 	{
 		
 	}
-	FForceFieldCSParameters(UTextureRenderTarget2D* IORenderTarget, float InScale, float InAngle, float InSpreadBlend,
+	SpectrumParameters(UTextureRenderTarget2D* IORenderTarget, float InScale, float InAngle, float InSpreadBlend,
 	float InSwell, float InAlpha, float InPeakOmega, float InGamma, float InShortWavesFade)
 		: RenderTarget(IORenderTarget)
 	, Scale(InScale), Angle(InAngle), SpreadBlend(InSpreadBlend), Swell(InSwell)
@@ -44,25 +44,22 @@ private:
 public:
 };
 
+
 /**
  * 
  */
-class FFTOCEAN_API ForceField
+class FFTOCEAN_API WavesRender
 {
 public:
-	ForceField();
+	WavesRender();
 
 	// Executes this shader on the render thread
-	static void DispatchRenderThread(
-		FRHICommandListImmediate& RHICmdList,
-		FForceFieldCSParameters Params
 
-	);
 
-	static void Dispatch(
-		FForceFieldCSParameters Params
+	void UpdateParameters(SpectrumParameters& DrawParameters);
 
-	)
+
+	static void Dispatch(SpectrumParameters Params)
 	{
 		ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
 			[Params](FRHICommandListImmediate& RHICmdList)
@@ -71,15 +68,24 @@ public:
 			});
 	}
 
-	void UpdateParameters(FForceFieldCSParameters& DrawParameters);
+	static void DispatchRenderThread(
+		FRHICommandListImmediate& RHICmdList,
+		SpectrumParameters Params
 
+	);
+	
 private:
 
 	//Cached Shader Manager Parameters
-	FForceFieldCSParameters cachedParams;
+	SpectrumParameters cachedParams;
 	//Whether we have cached parameters to pass to the shader or not
 	volatile bool bCachedParamsAreValid;
 
 	//Reference to a pooled render target where the shader will write its output
 	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput;
 };
+
+
+
+
+

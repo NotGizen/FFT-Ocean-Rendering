@@ -154,18 +154,15 @@ void MainCS(uint3 id : SV_DispatchThreadID) {
    // }
 }
 
+[numthreads(8,8,1)]
+void ConjugateCS(uint3 id : SV_DispatchThreadID)
+{
+	
+		float2 h0 = OutputTexture[id.xy].rg;
+		float2 h0conj = OutputTexture[uint2((SPECTRUM_TEX_SIZE - id.x ) % SPECTRUM_TEX_SIZE, (SPECTRUM_TEX_SIZE - id.y) % SPECTRUM_TEX_SIZE)].rg;
+
+		OutputTexture[id.xy] = float4(h0, h0conj.x, -h0conj.y);
+}
 
 /*[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
-void MainCS(uint3 Gid : SV_GroupID, //atm: -, 0...256, - in rows (Y)        --> current group index (dispatched by c++)
-                       uint3 DTid : SV_DispatchThreadID) //atm: 0...256 in rows & columns (XY)   --> "global" thread id
 
-{   
-    
-    float3 p = DTid.xyz;
-    int multiplier = 2;
-    float k = 2 * 3.14159265359 / 10;
-    float height = sin(k * DTid.x);
-
-    
-    OutputTexture[DTid.xy] = float4(0.f, height, 0.f, 1.f);
-}*/

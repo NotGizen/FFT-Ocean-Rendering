@@ -135,8 +135,8 @@ void AWaves::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	
 	
-	FForceFieldCSParameters params(HeightField, Scale, Angle,SpreadBlend, Swell,Alpha, PeakOmega, Gamma, ShortWavesFade);
+	SpectrumParameters params(HeightField, Scale, Angle,SpreadBlend, Swell,Alpha, PeakOmega, Gamma, ShortWavesFade);
 	
-	ForceField::Dispatch(params);
+	WavesRender::Dispatch(params);
 }
 
