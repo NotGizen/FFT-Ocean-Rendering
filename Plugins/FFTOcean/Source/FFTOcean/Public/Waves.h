@@ -45,9 +45,6 @@ protected:
 	UPROPERTY()
 	UTextureRenderTarget2D* Slope;
 	
-	UPROPERTY()
-	UTextureRenderTarget2D* Fourier;
-	
 	UPROPERTY(EditAnywhere)
 	UMaterialInstanceDynamic* OceanDynMat;
 	

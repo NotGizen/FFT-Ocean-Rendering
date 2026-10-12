@@ -4,7 +4,7 @@
 #include "Waves.h"
 #include "../Public/WavesRender.h"
 #include "ProceduralMeshComponent.h"
-#include "ShaderDefinitions.h"
+#include "../Shaders/Private/ShaderDefinitions.ush"
 #include "Engine/TextureRenderTarget2D.h"
 // Sets default values
 AWaves::AWaves()
@@ -78,12 +78,6 @@ void AWaves::BeginPlay()
 	Slope->bCanCreateUAV = true;
 	Slope->InitAutoFormat(TEX_SIZE, TEX_SIZE);
 	Slope->UpdateResourceImmediate();
-	
-	Fourier = NewObject<UTextureRenderTarget2D>(this);
-	Fourier->RenderTargetFormat = RTF_RGBA16f;
-	Fourier->bCanCreateUAV = true;
-	Fourier->InitAutoFormat(TEX_SIZE, TEX_SIZE);
-	Fourier->UpdateResourceImmediate();
 	
 	OceanDynMat = UMaterialInstanceDynamic::Create(OceanBaseMat, this);
 	OceanDynMat->SetTextureParameterValue(FName("DisplacementTexture"), Displacement);

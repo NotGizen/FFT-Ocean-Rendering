@@ -1,7 +1,7 @@
 // Include this
 
 #include "/Engine/Public/Platform.ush"
-#include "../../Source/FFTOcean/Private/ShaderDefinitions.h"
+#include "ShaderDefinitions.ush"
 
 // Read-write textures
 
@@ -235,9 +235,9 @@ RWTexture2D<float4> _Buffer0, _Buffer1, _Buffer2, _Buffer3;
 uint _Step;
 
 float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
-	uint b = _N >> (id.x + 1);
-	float2 mult = 2 * PI * float2(0.0f, 1.0f) / _N;
-	uint i = (2 * b * (id.y / b) + id.y % b) % _N;
+	uint b = TEX_SIZE >> (id.x + 1);
+	float2 mult = 2 * PI * float2(0.0f, 1.0f) / TEX_SIZE;
+	uint i = (2 * b * (id.y / b) + id.y % b) % TEX_SIZE;
 	float2 twiddle = ComplexExp(-mult * ((id.y / b) * b));
 
 	return float4(twiddle, i, i + b);
@@ -248,14 +248,14 @@ float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
 RWTexture2DArray<float4> FourierTexture;
 //bool _Direction;
 
-groupshared float4 fftGroupBuffer[2][SIZE];
+groupshared float4 fftGroupBuffer[2][TEX_SIZE];
 
 void ButterflyValues(uint step, uint index, out uint2 indices, out float2 twiddle) {
 	const float twoPi = 6.28318530718;
-	uint b = SIZE >> (step + 1);
+	uint b = TEX_SIZE >> (step + 1);
 	uint w = b * (index / b);
-	uint i = (w + index) % SIZE;
-	sincos(-twoPi / SIZE * w, twiddle.y, twiddle.x);
+	uint i = (w + index) % TEX_SIZE;
+	sincos(-twoPi / TEX_SIZE * w, twiddle.y, twiddle.x);
 
 	//This is what makes it the inverse FFT
 	twiddle.y = -twiddle.y;
@@ -285,13 +285,55 @@ float4 FFT(uint threadIndex, float4 input) {
 
 [numthreads(TEX_SIZE, 1, 1)]
 void FourierHorizontalCS(uint3 id : SV_DISPATCHTHREADID) {
-		FourierTexture[id.] = FFT(id.x, FourierTexture[uint3(id)]);
+		FourierTexture[id] = FFT(id.x, FourierTexture[uint3(id)]);
 	
 }
 
 [numthreads(TEX_SIZE, 1, 1)]
 void FourierVerticalCS(uint3 id : SV_DISPATCHTHREADID) {
 	
-//Shawap x with y so that the vertical values are written correctly
+//Swap x with y so that the vertical values are written correctly
 		FourierTexture[uint3(id.yxz)] = FFT(id.x, FourierTexture[uint3(id.yxz)]);
+}
+
+float4 Permute(float4 data, float3 id) {
+	return data * (1.0f - 2.0f * ((id.x + id.y) % 2));
+}
+
+
+[numthreads(8, 8, 1)]
+void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
+	
+		float4 htildeDisplacement = Permute(DisplacementTexture[id], id);
+		float4 htildeSlope = Permute(SlopeTexture[id], id);
+
+		float2 dxdz = htildeDisplacement.rg;
+		float2 dydxz = htildeDisplacement.ba;
+		float2 dyxdyz = htildeSlope.rg;
+		float2 dxxdzz = htildeSlope.ba;
+        
+		float jacobian = (1.0f + _Lambda.x * dxxdzz.x) * (1.0f + _Lambda.y * dxxdzz.y) - _Lambda.x * _Lambda.y * dydxz.y * dydxz.y;
+
+		float3 displacement = float3(_Lambda.x * dxdz.x, dydxz.x, _Lambda.y * dxdz.y);
+
+		float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * _Lambda));
+		float covariance = slopes.x * slopes.y;
+
+		float foam = _DisplacementTextures[uint3(id.xy, i)].a;
+		foam *= exp(-_FoamDecayRate);
+		foam = saturate(foam);
+
+		float biasedJacobian = max(0.0f, -(jacobian - _FoamBias));
+
+		if (biasedJacobian > _FoamThreshold)
+			foam += _FoamAdd * biasedJacobian;
+
+
+		_DisplacementTextures[uint3(id.xy, i)] = float4(displacement, foam);
+		_SlopeTextures[uint3(id.xy, i)] = float2(slopes);
+
+		if (i == 0) {
+			_BuoyancyData[id.xy] = displacement.y;
+		}
+	
 }

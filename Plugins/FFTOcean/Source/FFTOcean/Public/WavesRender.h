@@ -91,9 +91,7 @@ private:
 	
 };
 
-/**
- * 
- */
+
 class FFTOCEAN_API WavesRender
 {
 public:

@@ -6,7 +6,7 @@
 #include "RHI.h"
 
 #include "Modules/ModuleManager.h"
-#include "ShaderDefinitions.h"
+#include "../Shaders/Private/ShaderDefinitions.ush"
 
 #define NUM_THREADS_PER_GROUP_DIMENSION 8 //Change this after
 
@@ -202,18 +202,17 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	
 	//Pass 4 (Fourier Horizontal Pass)
 	
-	FRDGTextureRef FourierTex = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(FourierParams.FFTRT->GetRenderTargetResource()->TextureRHI, TEXT("FFT")));
 	
 	FFourierH::FParameters* FourierHParameters = GraphBuilder.AllocParameters<FFourierH::FParameters>();
 	
 
-	FourierHParameters->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(FourierTex));
+	FourierHParameters->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(DisplacementTexture));
 	
 	TShaderMapRef<FFourierH> FourierHorizontalCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("FFT Horizontal Pass"), FourierHorizontalCS, FourierHParameters, 
 		FIntVector(
-	TEX_SIZE,
 	1,
+	TEX_SIZE,
 	1));
 	
 	//Pass 5 (Fourier Vertical Pass)
@@ -221,14 +220,41 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	FFourierV::FParameters* FourierVParameters = GraphBuilder.AllocParameters<FFourierV::FParameters>();
 	
 
-	FourierVParameters->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(FourierTex));
+	FourierVParameters->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(DisplacementTexture));
 	
 	TShaderMapRef<FFourierV> FourierVerticalCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("FFT Vertical Pass"), FourierVerticalCS, FourierVParameters, 
 		FIntVector(
-	TEX_SIZE,
 	1,
+	TEX_SIZE,
+	1));
+	
+	//Redo FFT Pass For slope maps
+	
+	//Pass 4.2 (Slope Fourier Horizontal Pass)
+	
+	
+	FFourierH::FParameters* FourierHParameters2 = GraphBuilder.AllocParameters<FFourierH::FParameters>();
+	
+	FourierHParameters2->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("FFT Horizontal Slope Pass"), FourierHorizontalCS, FourierHParameters2, 
+		FIntVector(
+	1,
+	TEX_SIZE,
+	1));
+	
+	//Pass 5.2 (Slope Fourier Vertical Pass)
+	
+	FFourierV::FParameters* FourierVParameters2 = GraphBuilder.AllocParameters<FFourierV::FParameters>();
+	
+
+	FourierVParameters2->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
+	
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("FFT Vertical Slope Pass"), FourierVerticalCS, FourierVParameters2, 
+		FIntVector(
+	1,
+	TEX_SIZE,
 	1));
 	
 	GraphBuilder.Execute();
