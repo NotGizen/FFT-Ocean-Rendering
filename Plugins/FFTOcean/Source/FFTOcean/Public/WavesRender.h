@@ -79,7 +79,7 @@ public:
 		
 	}
 	
-	FFTParameters(UTextureRenderTarget2D* FourierRT, UTextureRenderTarget2D* DisplacementTex, UTextureRenderTarget2D* SlopeTex, float ATime)
+	FFTParameters(UTextureRenderTarget2D* FourierRT)
 		: FFTRT(FourierRT)
 	{
 		CachedRenderTargetSize = FourierRT ? FIntVector2(FourierRT->SizeX, FourierRT->SizeY) : FIntVector2::ZeroValue;
@@ -105,18 +105,18 @@ public:
 	//void UpdateParameters(SpectrumParameters& DrawParameters);
 
 
-	static void Dispatch(SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams)
+	static void Dispatch(SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, FFTParameters FourierParams)
 	{
 		ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
-			[SpectrumParams, TimeParams](FRHICommandListImmediate& RHICmdList)
+			[SpectrumParams, TimeParams, FourierParams](FRHICommandListImmediate& RHICmdList)
 			{
-				DispatchRenderThread(RHICmdList, SpectrumParams, TimeParams);
+				DispatchRenderThread(RHICmdList, SpectrumParams, TimeParams, FourierParams);
 			});
 	}
 
 	static void DispatchRenderThread(
 		FRHICommandListImmediate& RHICmdList,
-		SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams
+		SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, FFTParameters FourierParams
 
 	);
 	

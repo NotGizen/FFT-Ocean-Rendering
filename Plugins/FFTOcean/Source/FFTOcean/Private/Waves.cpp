@@ -4,6 +4,7 @@
 #include "Waves.h"
 #include "../Public/WavesRender.h"
 #include "ProceduralMeshComponent.h"
+#include "ShaderDefinitions.h"
 #include "Engine/TextureRenderTarget2D.h"
 // Sets default values
 AWaves::AWaves()
@@ -63,22 +64,26 @@ void AWaves::BeginPlay()
 	HeightField = NewObject<UTextureRenderTarget2D>(this);
 	HeightField->RenderTargetFormat = RTF_RGBA16f;
 	HeightField->bCanCreateUAV = true;
-	HeightField->InitAutoFormat(TEXTURE_RESOLUTION, TEXTURE_RESOLUTION);
+	HeightField->InitAutoFormat(TEX_SIZE, TEX_SIZE);
 	HeightField->UpdateResourceImmediate();
 	
 	Displacement = NewObject<UTextureRenderTarget2D>(this);
 	Displacement->RenderTargetFormat = RTF_RGBA16f;
 	Displacement->bCanCreateUAV = true;
-	Displacement->InitAutoFormat(TEXTURE_RESOLUTION, TEXTURE_RESOLUTION);
+	Displacement->InitAutoFormat(TEX_SIZE, TEX_SIZE);
 	Displacement->UpdateResourceImmediate();
 	
 	Slope = NewObject<UTextureRenderTarget2D>(this);
 	Slope->RenderTargetFormat = RTF_RGBA16f;
 	Slope->bCanCreateUAV = true;
-	Slope->InitAutoFormat(TEXTURE_RESOLUTION, TEXTURE_RESOLUTION);
+	Slope->InitAutoFormat(TEX_SIZE, TEX_SIZE);
 	Slope->UpdateResourceImmediate();
 	
-	//TODO: Change this after to be able to output displacement and slope maps to material
+	Fourier = NewObject<UTextureRenderTarget2D>(this);
+	Fourier->RenderTargetFormat = RTF_RGBA16f;
+	Fourier->bCanCreateUAV = true;
+	Fourier->InitAutoFormat(TEX_SIZE, TEX_SIZE);
+	Fourier->UpdateResourceImmediate();
 	
 	OceanDynMat = UMaterialInstanceDynamic::Create(OceanBaseMat, this);
 	OceanDynMat->SetTextureParameterValue(FName("DisplacementTexture"), Displacement);
@@ -153,6 +158,8 @@ void AWaves::Tick(float DeltaTime)
 	
 	float Timer = GetWorld()->GetTimeSeconds();
 	TimeEvolutionParameters TimeParameters(HeightField, Displacement, Slope, Timer); 
-	WavesRender::Dispatch(SpectrumParams, TimeParameters);
+	
+	FFTParameters FourierParams(Fourier);
+	WavesRender::Dispatch(SpectrumParams, TimeParameters, FourierParams);
 }
 

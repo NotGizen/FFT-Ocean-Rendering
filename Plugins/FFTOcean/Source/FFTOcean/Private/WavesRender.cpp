@@ -6,6 +6,7 @@
 #include "RHI.h"
 
 #include "Modules/ModuleManager.h"
+#include "ShaderDefinitions.h"
 
 #define NUM_THREADS_PER_GROUP_DIMENSION 8 //Change this after
 
@@ -87,6 +88,46 @@ class FTimeEvolution : public FGlobalShader
 };
 IMPLEMENT_GLOBAL_SHADER(FTimeEvolution, "/CustomShaders/Private/FFTWaves.usf", "TimeEvolutionCS", SF_Compute);
 
+//Fourier Horizontal pass
+class FFourierH : public FGlobalShader
+{
+	DECLARE_GLOBAL_SHADER(FFourierH)
+	SHADER_USE_PARAMETER_STRUCT(FFourierH, FGlobalShader)
+	
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters,)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, FourierTexture)
+	
+	END_SHADER_PARAMETER_STRUCT()
+	
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+	
+};
+IMPLEMENT_GLOBAL_SHADER(FFourierH, "/CustomShaders/Private/FFTWaves.usf", "FourierHorizontalCS", SF_Compute);
+
+//Fourier Vertical pass
+class FFourierV : public FGlobalShader
+{
+	DECLARE_GLOBAL_SHADER(FFourierV)
+	SHADER_USE_PARAMETER_STRUCT(FFourierV, FGlobalShader)
+	
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters,)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, FourierTexture)
+	
+	END_SHADER_PARAMETER_STRUCT()
+	
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+	
+};
+IMPLEMENT_GLOBAL_SHADER(FFourierV, "/CustomShaders/Private/FFTWaves.usf", "FourierVerticalCS", SF_Compute);
+
 
 WavesRender::WavesRender()
 {
@@ -100,7 +141,7 @@ WavesRender::WavesRender()
 	bCachedParamsAreValid = true;
 }*/
 
-void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams)
+void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, FFTParameters FourierParams )
 {
 	FRDGBuilder GraphBuilder(RHICmdList);
 	
@@ -159,22 +200,35 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
 	1));
 	
-	//Pass 4 (Fourier Pass)
+	//Pass 4 (Fourier Horizontal Pass)
 	
-	FRDGTextureRef SlopeTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(TimeParams.SlopeRT->GetRenderTargetResource()->TextureRHI, TEXT("Slope")));
+	FRDGTextureRef FourierTex = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(FourierParams.FFTRT->GetRenderTargetResource()->TextureRHI, TEXT("FFT")));
 	
-	FTimeEvolution::FParameters* TimeParameters = GraphBuilder.AllocParameters<FTimeEvolution::FParameters>();
+	FFourierH::FParameters* FourierHParameters = GraphBuilder.AllocParameters<FFourierH::FParameters>();
 	
-	TimeParameters->SpectrumTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(OutTexture));
-	TimeParameters->DisplacementTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(DisplacementTexture));
-	TimeParameters->SlopeTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
-	TimeParameters->Time = TimeParams.Time;
+
+	FourierHParameters->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(FourierTex));
 	
-	TShaderMapRef<FTimeEvolution> TimeEvolutionCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("TimeEvolution Pass"), TimeEvolutionCS, TimeParameters, 
+	TShaderMapRef<FFourierH> FourierHorizontalCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("FFT Horizontal Pass"), FourierHorizontalCS, FourierHParameters, 
 		FIntVector(
-	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().X, NUM_THREADS_PER_GROUP_DIMENSION),
-	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
+	TEX_SIZE,
+	1,
+	1));
+	
+	//Pass 5 (Fourier Vertical Pass)
+	
+	FFourierV::FParameters* FourierVParameters = GraphBuilder.AllocParameters<FFourierV::FParameters>();
+	
+
+	FourierVParameters->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(FourierTex));
+	
+	TShaderMapRef<FFourierV> FourierVerticalCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("FFT Vertical Pass"), FourierVerticalCS, FourierVParameters, 
+		FIntVector(
+	TEX_SIZE,
+	1,
 	1));
 	
 	GraphBuilder.Execute();

@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Waves.generated.h"
 
-#define TEXTURE_RESOLUTION 128
+
 
 class UProceduralMeshComponent;
 class UTextureRenderTarget2D;
@@ -44,6 +44,9 @@ protected:
 	
 	UPROPERTY()
 	UTextureRenderTarget2D* Slope;
+	
+	UPROPERTY()
+	UTextureRenderTarget2D* Fourier;
 	
 	UPROPERTY(EditAnywhere)
 	UMaterialInstanceDynamic* OceanDynMat;

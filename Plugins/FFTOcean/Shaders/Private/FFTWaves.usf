@@ -1,9 +1,10 @@
 // Include this
 
 #include "/Engine/Public/Platform.ush"
+#include "../../Source/FFTOcean/Private/ShaderDefinitions.h"
 
 // Read-write textures
-#define SPECTRUM_TEX_SIZE 256
+
 #define  GRAVITY 9.81f
 #define SEED 12345
 #define LOWCUTOFF 0.0001f
@@ -116,13 +117,13 @@ float ShortWavesFade(float kLength) {
 
 [numthreads(8,8,1)]
 void MainCS(uint3 id : SV_DispatchThreadID) {
-    uint seed = id.x + SPECTRUM_TEX_SIZE * id.y + SPECTRUM_TEX_SIZE;
+    uint seed = id.x + TEX_SIZE * id.y + TEX_SIZE;
     seed += SEED;
 
-	//const uint LENGHT_SCALE = SPECTRUM_TEX_SIZE / 8;
+	//const uint LENGHT_SCALE = TEX_SIZE / 8;
 	
     //for (uint i = 0; i < 4; ++i) {
-            float halfN = SPECTRUM_TEX_SIZE / 2.0f;
+            float halfN = TEX_SIZE / 2.0f;
 
         float deltaK = 2.0f * PI / LENGHT_SCALE;
         float2 K = (id.xy - halfN) * deltaK;
@@ -160,7 +161,7 @@ void ConjugateCS(uint3 id : SV_DispatchThreadID)
 {
 	
 		float2 h0 = OutputTexture[id.xy].rg;
-		float2 h0conj = OutputTexture[uint2((SPECTRUM_TEX_SIZE - id.x ) % SPECTRUM_TEX_SIZE, (SPECTRUM_TEX_SIZE - id.y) % SPECTRUM_TEX_SIZE)].rg;
+		float2 h0conj = OutputTexture[uint2((TEX_SIZE - id.x ) % TEX_SIZE, (TEX_SIZE - id.y) % TEX_SIZE)].rg;
 
 		OutputTexture[id.xy] = float4(h0, h0conj.x, -h0conj.y);
 }
@@ -188,7 +189,7 @@ void TimeEvolutionCS(uint3 id : SV_DispatchThreadID)
 		float2 h0 = initialSignal.xy;
 		float2 h0conj = initialSignal.zw;
 
-		float halfN = SPECTRUM_TEX_SIZE / 2.0f;
+		float halfN = TEX_SIZE / 2.0f;
 		float2 K = (id.xy - halfN) * 2.0f * PI / LENGHT_SCALE;
 		float kMag = length(K);
 		float kMagRcp = rcp(kMag);
@@ -282,14 +283,15 @@ float4 FFT(uint threadIndex, float4 input) {
 	return fftGroupBuffer[flag][threadIndex];
 }
 
-[numthreads(SPECTRUM_TEX_SIZE, 1, 1)]
-void CS_HorizontalFFT(uint3 id : SV_DISPATCHTHREADID) {
-		FourierTexture[uint3(id)] = FFT(id.x, FourierTexture[uint3(id)]);
+[numthreads(TEX_SIZE, 1, 1)]
+void FourierHorizontalCS(uint3 id : SV_DISPATCHTHREADID) {
+		FourierTexture[id.] = FFT(id.x, FourierTexture[uint3(id)]);
 	
 }
 
-[numthreads(SPECTRUM_TEX_SIZE, 1, 1)]
-void CS_VerticalFFT(uint3 id : SV_DISPATCHTHREADID) {
-
-		FourierTexture[uint3(id)] = FFT(id.x, FourierTexture[uint3(id)]);
+[numthreads(TEX_SIZE, 1, 1)]
+void FourierVerticalCS(uint3 id : SV_DISPATCHTHREADID) {
+	
+//Shawap x with y so that the vertical values are written correctly
+		FourierTexture[uint3(id.yxz)] = FFT(id.x, FourierTexture[uint3(id.yxz)]);
 }
