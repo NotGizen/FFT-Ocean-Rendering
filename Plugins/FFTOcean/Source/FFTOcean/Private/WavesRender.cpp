@@ -9,6 +9,7 @@
 
 #define NUM_THREADS_PER_GROUP_DIMENSION 8 //Change this after
 
+//Initial spectrum pass
 class FSpectrum : public FGlobalShader
 {
 	DECLARE_GLOBAL_SHADER(FSpectrum)
@@ -45,6 +46,7 @@ class FSpectrum : public FGlobalShader
 };
 IMPLEMENT_GLOBAL_SHADER(FSpectrum, "/CustomShaders/Private/FFTWaves.usf", "MainCS", SF_Compute);
 
+//Conjugate pass
 class FConjugate : public FGlobalShader
 {
 	DECLARE_GLOBAL_SHADER(FConjugate)
@@ -63,6 +65,28 @@ class FConjugate : public FGlobalShader
 };
 IMPLEMENT_GLOBAL_SHADER(FConjugate, "/CustomShaders/Private/FFTWaves.usf", "ConjugateCS", SF_Compute);
 
+//Time evolution pass
+class FTimeEvolution : public FGlobalShader
+{
+	DECLARE_GLOBAL_SHADER(FTimeEvolution)
+	SHADER_USE_PARAMETER_STRUCT(FTimeEvolution, FGlobalShader)
+	
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters,)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, SpectrumTexture)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, DisplacementTexture)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, SlopeTexture)
+	SHADER_PARAMETER(float, Time)
+	END_SHADER_PARAMETER_STRUCT()
+	
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+	
+};
+IMPLEMENT_GLOBAL_SHADER(FTimeEvolution, "/CustomShaders/Private/FFTWaves.usf", "TimeEvolutionCS", SF_Compute);
+
 
 WavesRender::WavesRender()
 {
@@ -70,39 +94,39 @@ WavesRender::WavesRender()
 
 
 
-void WavesRender::UpdateParameters(SpectrumParameters& DrawParameters)
+/*void WavesRender::UpdateParameters(SpectrumParameters& DrawParameters)
 {
 	cachedParams = DrawParameters;
 	bCachedParamsAreValid = true;
-}
+}*/
 
-void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, SpectrumParameters Params)
+void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams)
 {
 	FRDGBuilder GraphBuilder(RHICmdList);
 	
-	FRDGTextureRef OutTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(Params.RenderTarget->GetRenderTargetResource()->TextureRHI, TEXT("HeightField")));
+	FRDGTextureRef OutTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(SpectrumParams.RenderTarget->GetRenderTargetResource()->TextureRHI, TEXT("HeightField")));
 	// This is a pointer to the shader-parameters we declared in the .h
 	FSpectrum::FParameters* PassParameters;
 	// We ask the RDG to allocate some memory for our shader-parameters
 	PassParameters = GraphBuilder.AllocParameters<FSpectrum::FParameters>();
 
 	PassParameters->OutputTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(OutTexture));
-	PassParameters->scale = Params.Scale;
-	PassParameters->alpha = Params.Alpha;
-	PassParameters->angle = Params.Angle;
-	PassParameters->gamma = Params.Gamma;
-	PassParameters->peakOmega = Params.PeakOmega;
-	PassParameters->shortWavesFade = Params.ShortWavesFade;
-	PassParameters->spreadBlend = Params.SpreadBlend;
-	PassParameters->swell = Params.Swell;
+	PassParameters->scale = SpectrumParams.Scale;
+	PassParameters->alpha = SpectrumParams.Alpha;
+	PassParameters->angle = SpectrumParams.Angle;
+	PassParameters->gamma = SpectrumParams.Gamma;
+	PassParameters->peakOmega = SpectrumParams.PeakOmega;
+	PassParameters->shortWavesFade = SpectrumParams.ShortWavesFade;
+	PassParameters->spreadBlend = SpectrumParams.SpreadBlend;
+	PassParameters->swell = SpectrumParams.Swell;
 	
 	//Get a reference to our shader type from global shader map
 	//Pass 1 (static initial spectrum texture)
 	TShaderMapRef<FSpectrum> SpectrumCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Waves Pass"), SpectrumCS, PassParameters, 
 		FIntVector(
-	FMath::DivideAndRoundUp(Params.GetRenderTargetSize().X, NUM_THREADS_PER_GROUP_DIMENSION),
-	FMath::DivideAndRoundUp(Params.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().X, NUM_THREADS_PER_GROUP_DIMENSION),
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
 	1
 ));
 	//Pass 2 (Conjugate)
@@ -112,8 +136,45 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	TShaderMapRef<FConjugate> ConjugateCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Conjugate Pass"), ConjugateCS, PassParameters2, 
 		FIntVector(
-	FMath::DivideAndRoundUp(Params.GetRenderTargetSize().X, NUM_THREADS_PER_GROUP_DIMENSION),
-	FMath::DivideAndRoundUp(Params.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().X, NUM_THREADS_PER_GROUP_DIMENSION),
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
+	1));
+	
+	//Pass 3 (Time Evolution)
+	
+	FRDGTextureRef DisplacementTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(TimeParams.DisplacementRT->GetRenderTargetResource()->TextureRHI, TEXT("Displacement")));
+	FRDGTextureRef SlopeTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(TimeParams.SlopeRT->GetRenderTargetResource()->TextureRHI, TEXT("Slope")));
+	
+	FTimeEvolution::FParameters* TimeParameters = GraphBuilder.AllocParameters<FTimeEvolution::FParameters>();
+	
+	TimeParameters->SpectrumTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(OutTexture));
+	TimeParameters->DisplacementTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(DisplacementTexture));
+	TimeParameters->SlopeTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
+	TimeParameters->Time = TimeParams.Time;
+	
+	TShaderMapRef<FTimeEvolution> TimeEvolutionCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("TimeEvolution Pass"), TimeEvolutionCS, TimeParameters, 
+		FIntVector(
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().X, NUM_THREADS_PER_GROUP_DIMENSION),
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
+	1));
+	
+	//Pass 4 (Fourier Pass)
+	
+	FRDGTextureRef SlopeTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(TimeParams.SlopeRT->GetRenderTargetResource()->TextureRHI, TEXT("Slope")));
+	
+	FTimeEvolution::FParameters* TimeParameters = GraphBuilder.AllocParameters<FTimeEvolution::FParameters>();
+	
+	TimeParameters->SpectrumTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(OutTexture));
+	TimeParameters->DisplacementTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(DisplacementTexture));
+	TimeParameters->SlopeTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
+	TimeParameters->Time = TimeParams.Time;
+	
+	TShaderMapRef<FTimeEvolution> TimeEvolutionCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("TimeEvolution Pass"), TimeEvolutionCS, TimeParameters, 
+		FIntVector(
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().X, NUM_THREADS_PER_GROUP_DIMENSION),
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
 	1));
 	
 	GraphBuilder.Execute();

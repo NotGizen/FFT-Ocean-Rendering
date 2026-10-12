@@ -44,6 +44,52 @@ private:
 public:
 };
 
+struct TimeEvolutionParameters
+{
+	public:
+	UTextureRenderTarget2D* SpectrumRT;
+	UTextureRenderTarget2D* DisplacementRT;
+	UTextureRenderTarget2D* SlopeRT;
+	float Time;
+	
+	TimeEvolutionParameters()
+	{
+		
+	}
+	
+	TimeEvolutionParameters(UTextureRenderTarget2D* SpectrumTex, UTextureRenderTarget2D* DisplacementTex, UTextureRenderTarget2D* SlopeTex, float ATime)
+		: SpectrumRT(SpectrumTex), DisplacementRT(DisplacementTex), SlopeRT(SlopeTex), Time(ATime) //not 0 due to division in shaders?
+	{
+		CachedRenderTargetSize = SpectrumRT ? FIntVector2(SpectrumRT->SizeX, SpectrumRT->SizeY) : FIntVector2::ZeroValue;
+	}
+	
+private:
+	
+FIntVector2 CachedRenderTargetSize;
+	
+};
+
+struct FFTParameters
+{
+public:
+	UTextureRenderTarget2D* FFTRT;
+	
+	FFTParameters()
+	{
+		
+	}
+	
+	FFTParameters(UTextureRenderTarget2D* FourierRT, UTextureRenderTarget2D* DisplacementTex, UTextureRenderTarget2D* SlopeTex, float ATime)
+		: FFTRT(FourierRT)
+	{
+		CachedRenderTargetSize = FourierRT ? FIntVector2(FourierRT->SizeX, FourierRT->SizeY) : FIntVector2::ZeroValue;
+	}
+	
+private:
+	
+	FIntVector2 CachedRenderTargetSize;
+	
+};
 
 /**
  * 
@@ -56,21 +102,21 @@ public:
 	// Executes this shader on the render thread
 
 
-	void UpdateParameters(SpectrumParameters& DrawParameters);
+	//void UpdateParameters(SpectrumParameters& DrawParameters);
 
 
-	static void Dispatch(SpectrumParameters Params)
+	static void Dispatch(SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams)
 	{
 		ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
-			[Params](FRHICommandListImmediate& RHICmdList)
+			[SpectrumParams, TimeParams](FRHICommandListImmediate& RHICmdList)
 			{
-				DispatchRenderThread(RHICmdList, Params);
+				DispatchRenderThread(RHICmdList, SpectrumParams, TimeParams);
 			});
 	}
 
 	static void DispatchRenderThread(
 		FRHICommandListImmediate& RHICmdList,
-		SpectrumParameters Params
+		SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams
 
 	);
 	

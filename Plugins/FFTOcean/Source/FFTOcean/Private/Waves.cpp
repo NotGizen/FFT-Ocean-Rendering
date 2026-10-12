@@ -66,8 +66,22 @@ void AWaves::BeginPlay()
 	HeightField->InitAutoFormat(TEXTURE_RESOLUTION, TEXTURE_RESOLUTION);
 	HeightField->UpdateResourceImmediate();
 	
+	Displacement = NewObject<UTextureRenderTarget2D>(this);
+	Displacement->RenderTargetFormat = RTF_RGBA16f;
+	Displacement->bCanCreateUAV = true;
+	Displacement->InitAutoFormat(TEXTURE_RESOLUTION, TEXTURE_RESOLUTION);
+	Displacement->UpdateResourceImmediate();
+	
+	Slope = NewObject<UTextureRenderTarget2D>(this);
+	Slope->RenderTargetFormat = RTF_RGBA16f;
+	Slope->bCanCreateUAV = true;
+	Slope->InitAutoFormat(TEXTURE_RESOLUTION, TEXTURE_RESOLUTION);
+	Slope->UpdateResourceImmediate();
+	
+	//TODO: Change this after to be able to output displacement and slope maps to material
+	
 	OceanDynMat = UMaterialInstanceDynamic::Create(OceanBaseMat, this);
-	OceanDynMat->SetTextureParameterValue(FName("HeightFieldTexture"), HeightField);
+	OceanDynMat->SetTextureParameterValue(FName("DisplacementTexture"), Displacement);
 	
 	for (UProceduralMeshComponent* Tile : Meshes)
 	{
@@ -135,8 +149,10 @@ void AWaves::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	
 	
-	SpectrumParameters params(HeightField, Scale, Angle,SpreadBlend, Swell,Alpha, PeakOmega, Gamma, ShortWavesFade);
+	SpectrumParameters SpectrumParams(HeightField, Scale, Angle,SpreadBlend, Swell,Alpha, PeakOmega, Gamma, ShortWavesFade);
 	
-	WavesRender::Dispatch(params);
+	float Timer = GetWorld()->GetTimeSeconds();
+	TimeEvolutionParameters TimeParameters(HeightField, Displacement, Slope, Timer); 
+	WavesRender::Dispatch(SpectrumParams, TimeParameters);
 }
 

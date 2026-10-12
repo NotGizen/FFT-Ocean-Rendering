@@ -39,6 +39,12 @@ protected:
 	UPROPERTY()
 	UTextureRenderTarget2D* HeightField;
 	
+	UPROPERTY()
+	UTextureRenderTarget2D* Displacement;
+	
+	UPROPERTY()
+	UTextureRenderTarget2D* Slope;
+	
 	UPROPERTY(EditAnywhere)
 	UMaterialInstanceDynamic* OceanDynMat;
 	

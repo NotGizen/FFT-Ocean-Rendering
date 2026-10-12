@@ -3,13 +3,15 @@
 #include "/Engine/Public/Platform.ush"
 
 // Read-write textures
-#define SPECTRUM_TEX_SIZE 128
+#define SPECTRUM_TEX_SIZE 256
 #define  GRAVITY 9.81f
 #define SEED 12345
 #define LOWCUTOFF 0.0001f
 #define HIGHCUTOFF 9000.0f
 #define DEPTH 500.f
 #define PI 3.14159265359f
+#define LENGHT_SCALE 1000
+#define REPEAT_TIME 500.f
 
 
 	RWTexture2D<float4> OutputTexture;
@@ -38,7 +40,7 @@ float2 UniformToGaussian(float u1, float u2) {
 }
 
 float Dispersion(float kMag) {
-    return sqrt(GRAVITY * kMag * tanh(min(kMag * DEPTH, 20)));
+    return sqrt(kMag * tanh(min(kMag * DEPTH, 20)));
 }
 
 float DispersionDerivative(float kMag) {
@@ -117,12 +119,12 @@ void MainCS(uint3 id : SV_DispatchThreadID) {
     uint seed = id.x + SPECTRUM_TEX_SIZE * id.y + SPECTRUM_TEX_SIZE;
     seed += SEED;
 
-	//const uint lenghtScale = SPECTRUM_TEX_SIZE / 8;
-	const uint lenghtScale = 1000;
+	//const uint LENGHT_SCALE = SPECTRUM_TEX_SIZE / 8;
+	
     //for (uint i = 0; i < 4; ++i) {
             float halfN = SPECTRUM_TEX_SIZE / 2.0f;
 
-        float deltaK = 2.0f * PI / lenghtScale;
+        float deltaK = 2.0f * PI / LENGHT_SCALE;
         float2 K = (id.xy - halfN) * deltaK;
         float kLength = length(K);
 
@@ -149,9 +151,8 @@ void MainCS(uint3 id : SV_DispatchThreadID) {
         } 
 	else {
             OutputTexture[id.xy] = float4(0.0f,0,0,0);
-		//OutputTexture[id.xy] = float4(0.0f, 1.0f, 0.0f, 1.0f);
+		
        }
-   // }
 }
 
 [numthreads(8,8,1)]
@@ -163,6 +164,132 @@ void ConjugateCS(uint3 id : SV_DispatchThreadID)
 
 		OutputTexture[id.xy] = float4(h0, h0conj.x, -h0conj.y);
 }
+//Time evolution pass
 
-/*[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
+RWTexture2D<float4> SpectrumTexture;
+RWTexture2D<float4> DisplacementTexture;
+RWTexture2D<float4> SlopeTexture;
+float Time;
 
+float2 ComplexMult(float2 a, float2 b) {
+	return float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+float2 EulerFormula(float x) {
+	return float2(cos(x), sin(x));
+}
+
+
+[numthreads(8,8,1)]
+void TimeEvolutionCS(uint3 id : SV_DispatchThreadID)
+{
+	
+		float4 initialSignal = SpectrumTexture[id.xy];
+		float2 h0 = initialSignal.xy;
+		float2 h0conj = initialSignal.zw;
+
+		float halfN = SPECTRUM_TEX_SIZE / 2.0f;
+		float2 K = (id.xy - halfN) * 2.0f * PI / LENGHT_SCALE;
+		float kMag = length(K);
+		float kMagRcp = rcp(kMag);
+
+		if (kMag < 0.0001f) {
+			kMagRcp = 1.0f;
+		}
+
+		float w_0 = 2.0f * PI / REPEAT_TIME;
+		float dispersion = floor(sqrt(GRAVITY * kMag) / w_0) * w_0 * Time;
+
+		float2 exponent = EulerFormula(dispersion);
+
+		float2 htilde = (h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
+		float2 ih = float2(-htilde.y, htilde.x);
+
+		float2 displacementX = ih * K.x * kMagRcp;
+		float2 displacementY = htilde;
+		float2 displacementZ = ih * K.y * kMagRcp;
+
+		float2 displacementX_dx = -htilde * K.x * K.x * kMagRcp;
+		float2 displacementY_dx = ih * K.x;
+		float2 displacementZ_dx = -htilde * K.x * K.y * kMagRcp;
+
+		float2 displacementY_dz = ih * K.y;
+		float2 displacementZ_dz = -htilde * K.y * K.y * kMagRcp;
+
+		float2 htildeDisplacementX = float2(displacementX.x - displacementZ.y, displacementX.y + displacementZ.x);
+		float2 htildeDisplacementZ = float2(displacementY.x - displacementZ_dx.y, displacementY.y + displacementZ_dx.x);
+        
+		float2 htildeSlopeX = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
+		float2 htildeSlopeZ = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
+
+		DisplacementTexture[id.xy] = float4(htildeDisplacementX, htildeDisplacementZ);
+		SlopeTexture[id.xy] = float4(htildeSlopeX, htildeSlopeZ);
+}
+
+float2 ComplexExp(float2 a) {
+	return float2(cos(a.y), sin(a.y) * exp(a.x));
+}
+
+RWTexture2D<float4> _Buffer0, _Buffer1, _Buffer2, _Buffer3;
+uint _Step;
+
+float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
+	uint b = _N >> (id.x + 1);
+	float2 mult = 2 * PI * float2(0.0f, 1.0f) / _N;
+	uint i = (2 * b * (id.y / b) + id.y % b) % _N;
+	float2 twiddle = ComplexExp(-mult * ((id.y / b) * b));
+
+	return float4(twiddle, i, i + b);
+}
+
+#define LOG_SIZE 8 // change accordingly to Tex_Size
+
+RWTexture2DArray<float4> FourierTexture;
+//bool _Direction;
+
+groupshared float4 fftGroupBuffer[2][SIZE];
+
+void ButterflyValues(uint step, uint index, out uint2 indices, out float2 twiddle) {
+	const float twoPi = 6.28318530718;
+	uint b = SIZE >> (step + 1);
+	uint w = b * (index / b);
+	uint i = (w + index) % SIZE;
+	sincos(-twoPi / SIZE * w, twiddle.y, twiddle.x);
+
+	//This is what makes it the inverse FFT
+	twiddle.y = -twiddle.y;
+	indices = uint2(i, i + b);
+}
+
+float4 FFT(uint threadIndex, float4 input) {
+	fftGroupBuffer[0][threadIndex] = input;
+	GroupMemoryBarrierWithGroupSync();
+	bool flag = false;
+
+	[unroll] //Tells the compiler to make the loop sequencially (uses all indexes) rather than a statement, where it checks if i still true
+	for (uint step = 0; step < LOG_SIZE; ++step) {
+		uint2 inputsIndices;
+		float2 twiddle;
+		ButterflyValues(step, threadIndex, inputsIndices, twiddle);
+
+		float4 v = fftGroupBuffer[flag][inputsIndices.y];
+		fftGroupBuffer[!flag][threadIndex] = fftGroupBuffer[flag][inputsIndices.x] + float4(ComplexMult(twiddle, v.xy), ComplexMult(twiddle, v.zw));
+
+		flag = !flag;
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+	return fftGroupBuffer[flag][threadIndex];
+}
+
+[numthreads(SPECTRUM_TEX_SIZE, 1, 1)]
+void CS_HorizontalFFT(uint3 id : SV_DISPATCHTHREADID) {
+		FourierTexture[uint3(id)] = FFT(id.x, FourierTexture[uint3(id)]);
+	
+}
+
+[numthreads(SPECTRUM_TEX_SIZE, 1, 1)]
+void CS_VerticalFFT(uint3 id : SV_DISPATCHTHREADID) {
+
+		FourierTexture[uint3(id)] = FFT(id.x, FourierTexture[uint3(id)]);
+}
