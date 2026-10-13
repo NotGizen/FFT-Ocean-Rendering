@@ -11,9 +11,11 @@
 #define HIGHCUTOFF 9000.0f
 #define DEPTH 500.f
 #define PI 3.14159265359f
-#define LENGHT_SCALE 1000
+#define LENGHT_SCALE 10 //modified this to match the 10x10 mesh
 #define REPEAT_TIME 500.f
 
+//LastPass
+#define LAMBDA float2(1.0f, 1.0f)
 
 	RWTexture2D<float4> OutputTexture;
 	float scale;
@@ -203,7 +205,8 @@ void TimeEvolutionCS(uint3 id : SV_DispatchThreadID)
 
 		float2 exponent = EulerFormula(dispersion);
 
-		float2 htilde = (h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
+		//float2 htilde = (h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
+	float2 htilde = ComplexMult(h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
 		float2 ih = float2(-htilde.y, htilde.x);
 
 		float2 displacementX = ih * K.x * kMagRcp;
@@ -302,38 +305,36 @@ float4 Permute(float4 data, float3 id) {
 
 
 [numthreads(8, 8, 1)]
-void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
+void AssembleMapsCS(uint3 id : SV_DISPATCHTHREADID) {
 	
-		float4 htildeDisplacement = Permute(DisplacementTexture[id], id);
-		float4 htildeSlope = Permute(SlopeTexture[id], id);
+		float4 htildeDisplacement = Permute(DisplacementTexture[id.xy], id);
+		float4 htildeSlope = Permute(SlopeTexture[id.xy], id);
 
 		float2 dxdz = htildeDisplacement.rg;
 		float2 dydxz = htildeDisplacement.ba;
 		float2 dyxdyz = htildeSlope.rg;
 		float2 dxxdzz = htildeSlope.ba;
         
-		float jacobian = (1.0f + _Lambda.x * dxxdzz.x) * (1.0f + _Lambda.y * dxxdzz.y) - _Lambda.x * _Lambda.y * dydxz.y * dydxz.y;
+		//float jacobian = (1.0f + LAMBDA.x * dxxdzz.x) * (1.0f + LAMBDA.y * dxxdzz.y) - LAMBDA.x * LAMBDA.y * dydxz.y * dydxz.y;
 
-		float3 displacement = float3(_Lambda.x * dxdz.x, dydxz.x, _Lambda.y * dxdz.y);
+		float3 displacement = float3(LAMBDA.x * dxdz.x, dydxz.x, LAMBDA.y * dxdz.y);
 
-		float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * _Lambda));
-		float covariance = slopes.x * slopes.y;
+		float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * LAMBDA));
+		//float covariance = slopes.x * slopes.y;
 
-		float foam = _DisplacementTextures[uint3(id.xy, i)].a;
-		foam *= exp(-_FoamDecayRate);
-		foam = saturate(foam);
+		//float foam = _DisplacementTextures[uint3(id.xy, i)].a;
+		//foam *= exp(-_FoamDecayRate);
+		//foam = saturate(foam);
 
-		float biasedJacobian = max(0.0f, -(jacobian - _FoamBias));
+		//float biasedJacobian = max(0.0f, -(jacobian - _FoamBias));
 
-		if (biasedJacobian > _FoamThreshold)
-			foam += _FoamAdd * biasedJacobian;
+		//if (biasedJacobian > _FoamThreshold)
+		//	foam += _FoamAdd * biasedJacobian;
+		
+	//Fill in foam variable
+		float foam = 1.f;
+		DisplacementTexture[id.xy] = float4(displacement, foam);
+		//SlopeTexture[id.xy] = float2(slopes);
+		SlopeTexture[id.xy] = float4(slopes.x, slopes.y, 0.f, 1.f);
 
-
-		_DisplacementTextures[uint3(id.xy, i)] = float4(displacement, foam);
-		_SlopeTextures[uint3(id.xy, i)] = float2(slopes);
-
-		if (i == 0) {
-			_BuoyancyData[id.xy] = displacement.y;
-		}
-	
 }

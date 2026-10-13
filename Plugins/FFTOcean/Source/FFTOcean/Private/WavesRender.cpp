@@ -128,6 +128,25 @@ class FFourierV : public FGlobalShader
 };
 IMPLEMENT_GLOBAL_SHADER(FFourierV, "/CustomShaders/Private/FFTWaves.usf", "FourierVerticalCS", SF_Compute);
 
+//Assemble Maps pass
+class FAssembleMaps : public FGlobalShader
+{
+	DECLARE_GLOBAL_SHADER(FAssembleMaps)
+	SHADER_USE_PARAMETER_STRUCT(FAssembleMaps, FGlobalShader)
+	
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters,)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, DisplacementTexture)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, SlopeTexture)
+	END_SHADER_PARAMETER_STRUCT()
+	
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+	
+};
+IMPLEMENT_GLOBAL_SHADER(FAssembleMaps, "/CustomShaders/Private/FFTWaves.usf", "AssembleMapsCS", SF_Compute);
 
 WavesRender::WavesRender()
 {
@@ -141,7 +160,7 @@ WavesRender::WavesRender()
 	bCachedParamsAreValid = true;
 }*/
 
-void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, FFTParameters FourierParams )
+void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams)
 {
 	FRDGBuilder GraphBuilder(RHICmdList);
 	
@@ -257,22 +276,20 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	TEX_SIZE,
 	1));
 	
+	//Pass 6 (Assemble Maps)
+	
+	FAssembleMaps::FParameters* AssembleParameters = GraphBuilder.AllocParameters<FAssembleMaps::FParameters>();
+	
+	AssembleParameters->DisplacementTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(DisplacementTexture));
+	AssembleParameters->SlopeTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
+	
+	TShaderMapRef<FAssembleMaps> AssembleMapsCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	//change spectrumParams.Get renderSize for a dfixed value to avoid confusion
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Assemble Maps Pass"), AssembleMapsCS, AssembleParameters, 
+		FIntVector(
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().X, NUM_THREADS_PER_GROUP_DIMENSION),
+	FMath::DivideAndRoundUp(SpectrumParams.GetRenderTargetSize().Y, NUM_THREADS_PER_GROUP_DIMENSION),
+	1));
 	GraphBuilder.Execute();
 }
-//Conjugate Shader
 
-/*class FConjugateCS : public FGlobalShader
-{
-	DECLARE_GLOBAL_SHADER(FConjugateCS)
-	SHADER_USE_PARAMETER_STRUCT(FConjugateCS, FGlobalShader)
-
-	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, OutputTexture)
-	END_SHADER_PARAMETER_STRUCT()
-
-	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
-	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
-	}
-};
-IMPLEMENT_GLOBAL_SHADER(FConjugateCS, "/CustomShaders/Private/FFTWaves.usf", "ConjugateCS", SF_Compute);*/

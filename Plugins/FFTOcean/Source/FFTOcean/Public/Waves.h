@@ -75,6 +75,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category = "Ocean Params")
 	float ShortWavesFade;
+	
+	//UPROPERTY(EditAnywhere, Category = "Ocean Params")
+	//float Lambda;
 
 public:	
 	// Called every frame

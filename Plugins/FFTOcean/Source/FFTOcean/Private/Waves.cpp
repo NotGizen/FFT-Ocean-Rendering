@@ -16,13 +16,14 @@ AWaves::AWaves()
 	//Set default params
 	
 	Scale = 1.0;
-	Alpha = 1.0f;
+	Alpha = 0.19f;
 	Angle = 0.0f;
 	Gamma = 1.0f;
 	PeakOmega = 0.1f;
 	ShortWavesFade = 1.0f;
 	SpreadBlend = 1.0f;
 	Swell = 1.0f;
+	
 	
 	
 	PerRowAmount = 10;
@@ -153,7 +154,7 @@ void AWaves::Tick(float DeltaTime)
 	float Timer = GetWorld()->GetTimeSeconds();
 	TimeEvolutionParameters TimeParameters(HeightField, Displacement, Slope, Timer); 
 	
-	FFTParameters FourierParams(Fourier);
-	WavesRender::Dispatch(SpectrumParams, TimeParameters, FourierParams);
+	//FFTParameters FourierParams();
+	WavesRender::Dispatch(SpectrumParams, TimeParameters);
 }
 

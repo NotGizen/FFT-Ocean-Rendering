@@ -91,6 +91,30 @@ private:
 	
 };
 
+struct AssembleParameters
+{
+public:
+	UTextureRenderTarget2D* DisplacementRT;
+	UTextureRenderTarget2D* SlopeRT;
+	
+	AssembleParameters()
+	{
+		
+	}
+	
+	AssembleParameters(UTextureRenderTarget2D* DisplacementTarget, UTextureRenderTarget2D* SlopeTarget)
+		: DisplacementRT(DisplacementTarget), SlopeRT(SlopeTarget)
+	{
+		//Both displacement and slope targets are same size so it safe to use the same CachedRenderTargetSize for both
+		CachedRenderTargetSize = DisplacementRT ? FIntVector2(DisplacementRT->SizeX, DisplacementRT->SizeY) : FIntVector2::ZeroValue;
+	}
+	
+private:
+	
+	FIntVector2 CachedRenderTargetSize;
+	
+};
+
 
 class FFTOCEAN_API WavesRender
 {
@@ -103,18 +127,18 @@ public:
 	//void UpdateParameters(SpectrumParameters& DrawParameters);
 
 
-	static void Dispatch(SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, FFTParameters FourierParams)
+	static void Dispatch(SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams)
 	{
 		ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
-			[SpectrumParams, TimeParams, FourierParams](FRHICommandListImmediate& RHICmdList)
+			[SpectrumParams, TimeParams](FRHICommandListImmediate& RHICmdList)
 			{
-				DispatchRenderThread(RHICmdList, SpectrumParams, TimeParams, FourierParams);
+				DispatchRenderThread(RHICmdList, SpectrumParams, TimeParams);
 			});
 	}
 
 	static void DispatchRenderThread(
 		FRHICommandListImmediate& RHICmdList,
-		SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, FFTParameters FourierParams
+		SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams
 
 	);
 	
