@@ -45,6 +45,9 @@ protected:
 	UPROPERTY()
 	UTextureRenderTarget2D* Slope;
 	
+	UPROPERTY()
+	UTextureRenderTarget2D* PreSlope;
+	
 	UPROPERTY(EditAnywhere)
 	UMaterialInstanceDynamic* OceanDynMat;
 	

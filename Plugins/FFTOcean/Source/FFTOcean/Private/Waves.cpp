@@ -11,13 +11,13 @@ AWaves::AWaves()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	TileSize = 100.f;
+	TileSize = 1000.f; //this value is in cm so 100cm is 1m
 	
 	//Set default params
 	
 	Scale = 1.0;
 	Alpha = 0.19f;
-	Angle = 0.0f;
+	Angle = 0.6f;
 	Gamma = 1.0f;
 	PeakOmega = 0.1f;
 	ShortWavesFade = 1.0f;
@@ -25,8 +25,8 @@ AWaves::AWaves()
 	Swell = 1.0f;
 	
 	
-	
-	PerRowAmount = 10;
+	//in a grid 10x10 (100) , it will have 10mx10m, make sure to match this with LENGHT_SCALE from shader
+	PerRowAmount = 10; 
 	USceneComponent* SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = SceneRoot;
 	int32 NameCounter = 0;
@@ -80,8 +80,15 @@ void AWaves::BeginPlay()
 	Slope->InitAutoFormat(TEX_SIZE, TEX_SIZE);
 	Slope->UpdateResourceImmediate();
 	
+	PreSlope = NewObject<UTextureRenderTarget2D>(this);
+    	PreSlope->RenderTargetFormat = RTF_RGBA16f;
+    	PreSlope->bCanCreateUAV = true;
+    	PreSlope->InitAutoFormat(TEX_SIZE, TEX_SIZE);
+    	PreSlope->UpdateResourceImmediate();
+	
 	OceanDynMat = UMaterialInstanceDynamic::Create(OceanBaseMat, this);
 	OceanDynMat->SetTextureParameterValue(FName("DisplacementTexture"), Displacement);
+	OceanDynMat->SetTextureParameterValue(FName("SlopeTexture"), Slope);
 	
 	for (UProceduralMeshComponent* Tile : Meshes)
 	{
@@ -152,9 +159,11 @@ void AWaves::Tick(float DeltaTime)
 	SpectrumParameters SpectrumParams(HeightField, Scale, Angle,SpreadBlend, Swell,Alpha, PeakOmega, Gamma, ShortWavesFade);
 	
 	float Timer = GetWorld()->GetTimeSeconds();
-	TimeEvolutionParameters TimeParameters(HeightField, Displacement, Slope, Timer); 
+	TimeEvolutionParameters TimeParameters(HeightField, Displacement, PreSlope, Timer); 
+	
+	AssembleParameters AssParameters(Displacement, Slope, PreSlope);
 	
 	//FFTParameters FourierParams();
-	WavesRender::Dispatch(SpectrumParams, TimeParameters);
+	WavesRender::Dispatch(SpectrumParams, TimeParameters, AssParameters);
 }
 

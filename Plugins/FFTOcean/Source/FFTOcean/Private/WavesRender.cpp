@@ -75,7 +75,7 @@ class FTimeEvolution : public FGlobalShader
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters,)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, SpectrumTexture)
 	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, DisplacementTexture)
-	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, SlopeTexture)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, PreSlopeTexture)
 	SHADER_PARAMETER(float, Time)
 	END_SHADER_PARAMETER_STRUCT()
 	
@@ -136,7 +136,8 @@ class FAssembleMaps : public FGlobalShader
 	
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters,)
 	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, DisplacementTexture)
-	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, SlopeTexture)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, PreSlopeTexture)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float2>, SlopeTexture)
 	END_SHADER_PARAMETER_STRUCT()
 	
 
@@ -160,7 +161,7 @@ WavesRender::WavesRender()
 	bCachedParamsAreValid = true;
 }*/
 
-void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams)
+void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, AssembleParameters AssembleParams)
 {
 	FRDGBuilder GraphBuilder(RHICmdList);
 	
@@ -203,13 +204,13 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	//Pass 3 (Time Evolution)
 	
 	FRDGTextureRef DisplacementTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(TimeParams.DisplacementRT->GetRenderTargetResource()->TextureRHI, TEXT("Displacement")));
-	FRDGTextureRef SlopeTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(TimeParams.SlopeRT->GetRenderTargetResource()->TextureRHI, TEXT("Slope")));
+	FRDGTextureRef PreSlopeTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(TimeParams.PreSlopeRT->GetRenderTargetResource()->TextureRHI, TEXT("PreSlope")));
 	
 	FTimeEvolution::FParameters* TimeParameters = GraphBuilder.AllocParameters<FTimeEvolution::FParameters>();
 	
 	TimeParameters->SpectrumTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(OutTexture));
 	TimeParameters->DisplacementTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(DisplacementTexture));
-	TimeParameters->SlopeTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
+	TimeParameters->PreSlopeTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(PreSlopeTexture));
 	TimeParameters->Time = TimeParams.Time;
 	
 	TShaderMapRef<FTimeEvolution> TimeEvolutionCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -256,7 +257,7 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	
 	FFourierH::FParameters* FourierHParameters2 = GraphBuilder.AllocParameters<FFourierH::FParameters>();
 	
-	FourierHParameters2->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
+	FourierHParameters2->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(PreSlopeTexture));
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("FFT Horizontal Slope Pass"), FourierHorizontalCS, FourierHParameters2, 
 		FIntVector(
 	1,
@@ -268,7 +269,7 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	FFourierV::FParameters* FourierVParameters2 = GraphBuilder.AllocParameters<FFourierV::FParameters>();
 	
 
-	FourierVParameters2->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
+	FourierVParameters2->FourierTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(PreSlopeTexture));
 	
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("FFT Vertical Slope Pass"), FourierVerticalCS, FourierVParameters2, 
 		FIntVector(
@@ -279,8 +280,9 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	//Pass 6 (Assemble Maps)
 	
 	FAssembleMaps::FParameters* AssembleParameters = GraphBuilder.AllocParameters<FAssembleMaps::FParameters>();
-	
+	FRDGTextureRef SlopeTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(AssembleParams.SlopeRT->GetRenderTargetResource()->TextureRHI, TEXT("Slope")));
 	AssembleParameters->DisplacementTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(DisplacementTexture));
+	AssembleParameters->PreSlopeTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(PreSlopeTexture));
 	AssembleParameters->SlopeTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SlopeTexture));
 	
 	TShaderMapRef<FAssembleMaps> AssembleMapsCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));

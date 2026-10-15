@@ -49,7 +49,7 @@ struct TimeEvolutionParameters
 	public:
 	UTextureRenderTarget2D* SpectrumRT;
 	UTextureRenderTarget2D* DisplacementRT;
-	UTextureRenderTarget2D* SlopeRT;
+	UTextureRenderTarget2D* PreSlopeRT;
 	float Time;
 	
 	TimeEvolutionParameters()
@@ -57,8 +57,8 @@ struct TimeEvolutionParameters
 		
 	}
 	
-	TimeEvolutionParameters(UTextureRenderTarget2D* SpectrumTex, UTextureRenderTarget2D* DisplacementTex, UTextureRenderTarget2D* SlopeTex, float ATime)
-		: SpectrumRT(SpectrumTex), DisplacementRT(DisplacementTex), SlopeRT(SlopeTex), Time(ATime) //not 0 due to division in shaders?
+	TimeEvolutionParameters(UTextureRenderTarget2D* SpectrumTex, UTextureRenderTarget2D* DisplacementTex, UTextureRenderTarget2D* PreSlopeTex, float ATime)
+		: SpectrumRT(SpectrumTex), DisplacementRT(DisplacementTex), PreSlopeRT(PreSlopeTex), Time(ATime) //not 0 due to division in shaders?
 	{
 		CachedRenderTargetSize = SpectrumRT ? FIntVector2(SpectrumRT->SizeX, SpectrumRT->SizeY) : FIntVector2::ZeroValue;
 	}
@@ -95,6 +95,7 @@ struct AssembleParameters
 {
 public:
 	UTextureRenderTarget2D* DisplacementRT;
+	UTextureRenderTarget2D* PreSlopeRT;
 	UTextureRenderTarget2D* SlopeRT;
 	
 	AssembleParameters()
@@ -102,8 +103,8 @@ public:
 		
 	}
 	
-	AssembleParameters(UTextureRenderTarget2D* DisplacementTarget, UTextureRenderTarget2D* SlopeTarget)
-		: DisplacementRT(DisplacementTarget), SlopeRT(SlopeTarget)
+	AssembleParameters(UTextureRenderTarget2D* DisplacementTarget, UTextureRenderTarget2D* SlopeTarget, UTextureRenderTarget2D* PreSlopeTarget)
+		: DisplacementRT(DisplacementTarget), SlopeRT(SlopeTarget), PreSlopeRT(PreSlopeTarget)
 	{
 		//Both displacement and slope targets are same size so it safe to use the same CachedRenderTargetSize for both
 		CachedRenderTargetSize = DisplacementRT ? FIntVector2(DisplacementRT->SizeX, DisplacementRT->SizeY) : FIntVector2::ZeroValue;
@@ -127,18 +128,18 @@ public:
 	//void UpdateParameters(SpectrumParameters& DrawParameters);
 
 
-	static void Dispatch(SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams)
+	static void Dispatch(SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, AssembleParameters AssembleParams)
 	{
 		ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
-			[SpectrumParams, TimeParams](FRHICommandListImmediate& RHICmdList)
+			[SpectrumParams, TimeParams, AssembleParams](FRHICommandListImmediate& RHICmdList)
 			{
-				DispatchRenderThread(RHICmdList, SpectrumParams, TimeParams);
+				DispatchRenderThread(RHICmdList, SpectrumParams, TimeParams, AssembleParams);
 			});
 	}
 
 	static void DispatchRenderThread(
 		FRHICommandListImmediate& RHICmdList,
-		SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams
+		SpectrumParameters SpectrumParams, TimeEvolutionParameters TimeParams, AssembleParameters AssembleParams
 
 	);
 	
