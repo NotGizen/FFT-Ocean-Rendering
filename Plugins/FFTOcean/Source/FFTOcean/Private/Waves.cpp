@@ -14,16 +14,26 @@ AWaves::AWaves()
 	TileSize = 1000.f; //this value is in cm so 100cm is 1m
 	
 	//Set default params
-	
-	Scale = 1.0;
+	//wrong params
+	/*Scale = 1.0;
 	Alpha = 0.19f;
-	Angle = 0.6f;
-	Gamma = 1.0f;
-	PeakOmega = 0.1f;
-	ShortWavesFade = 1.0f;
-	SpreadBlend = 1.0f;
-	Swell = 1.0f;
+	Angle = 0.f;
+	Gamma = 3.3f;
+	PeakOmega = 0.22f;
+	ShortWavesFade = 0.16f;
+	SpreadBlend = 0.35f;
+	Swell = 0.f; //can be 1.f*/
 	
+	//Timethy parameters
+	Scale = 1.0;
+	Gamma = 3.3f;
+	ShortWavesFade = 0.85f;
+	SpreadBlend = 1.0f;
+	Swell = 0.f;
+
+	WindSpeed = 50.f;
+	WindDirection = 0.f;
+	Fetch = 5000.f;
 	
 	//in a grid 10x10 (100) , it will have 10mx10m, make sure to match this with LENGHT_SCALE from shader
 	PerRowAmount = 10; 
@@ -150,13 +160,33 @@ void AWaves::CreateGrid(float tileSize, int32 x, int32 y, UProceduralMeshCompone
 	
 }
 
+float AWaves::JonswapAlpha(float fetch, float windSpeed)
+{
+	return 0.076f * pow(GRAVITY * fetch / windSpeed / windSpeed, - 0.22f);
+}
+
+float AWaves::JonswapPeakOmega(float fetch, float windSpeed)
+{
+	return 22.0f * pow(windSpeed * fetch / GRAVITY / GRAVITY, -0.33f);
+}
+
+float AWaves::JonswapAngle(float windDirection)
+{
+	return WindDirection / 180.0f * PI;
+}
+
 // Called every frame
 void AWaves::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
+	//modify this for only when values changed
+	Alpha =  JonswapAlpha(Fetch, WindSpeed);
+	PeakOmega = JonswapPeakOmega(Fetch, WindSpeed);
+	Angle = JonswapAngle(WindDirection);
+	//
 	
-	SpectrumParameters SpectrumParams(HeightField, Scale, Angle,SpreadBlend, Swell,Alpha, PeakOmega, Gamma, ShortWavesFade);
+	SpectrumParameters SpectrumParams(HeightField, Scale,SpreadBlend, Swell, Gamma, ShortWavesFade, WindSpeed, WindDirection, Fetch, Alpha, PeakOmega, Angle);
 	
 	float Timer = GetWorld()->GetTimeSeconds();
 	TimeEvolutionParameters TimeParameters(HeightField, Displacement, PreSlope, Timer); 

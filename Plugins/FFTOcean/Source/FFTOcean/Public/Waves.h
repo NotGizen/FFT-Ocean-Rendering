@@ -36,6 +36,11 @@ protected:
 	
 	void CreateGrid(float tileSize, int32 x, int32 y, UProceduralMeshComponent*& mesh);
 	
+	//Spectrum parameters fucntions
+	float JonswapAlpha(float fetch, float windspeed);
+	float JonswapPeakOmega(float fetch, float windspeed);
+	float JonswapAngle(float windDirection);
+	
 	UPROPERTY()
 	UTextureRenderTarget2D* HeightField;
 	
@@ -55,32 +60,40 @@ protected:
 	UMaterialInterface* OceanBaseMat;
 	
 	//Ocean Params
-	UPROPERTY(EditAnywhere, Category = "Ocean Params")
+	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 1.f, ClampMax =  5.f))
 	float Scale;
 	
-	UPROPERTY(EditAnywhere, Category = "Ocean Params")
-	float Angle;
-	
-	UPROPERTY(EditAnywhere, Category = "Ocean Params")
+	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  1.f))
 	float SpreadBlend;
 	
-	UPROPERTY(EditAnywhere, Category = "Ocean Params")
+	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  1.f))
 	float Swell;
 	
-	UPROPERTY(EditAnywhere, Category = "Ocean Params")
-	float Alpha;
-	
-	UPROPERTY(EditAnywhere, Category = "Ocean Params")
-	float PeakOmega;
-	
-	UPROPERTY(EditAnywhere, Category = "Ocean Params")
+	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  7.f))
 	float Gamma;
 	
-	UPROPERTY(EditAnywhere, Category = "Ocean Params")
+	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  1.f))
 	float ShortWavesFade;
 	
-	//UPROPERTY(EditAnywhere, Category = "Ocean Params")
-	//float Lambda;
+	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  100.f))
+	float WindSpeed; //[0.f, 100.f]
+	
+	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  360.f))
+	float WindDirection; // [0.0f, 360.0f]
+	
+	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  10000.f))
+	float Fetch; //[0.0f, 10000.0f]
+	
+	//Non-modifiable values
+	UPROPERTY(VisibleAnywhere, Category = "Ocean Params")
+	float Angle;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Ocean Params")
+	float Alpha;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Ocean Params")
+	float PeakOmega;
+	
 
 public:	
 	// Called every frame

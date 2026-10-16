@@ -5,12 +5,11 @@
 
 // Read-write textures
 
-#define  GRAVITY 9.81f
+
 #define SEED 12345
 #define LOWCUTOFF 0.0001f
 #define HIGHCUTOFF 9000.0f
 #define DEPTH 500.f
-#define PI 3.14159265359f
 #define LENGHT_SCALE 100 //10 - modified this to match the 10x10 mesh
 #define REPEAT_TIME 500.f
 
@@ -19,14 +18,18 @@
 
 	RWTexture2D<float4> OutputTexture;
 	float scale;
-	float angle;
 	float spreadBlend;
 	float swell;
-	float alpha;
-	float peakOmega;
 	float gamma;
 	float shortWavesFade;
+	
+	float windSpeed;
+	float windDirection;
+	float fetch;
 
+	float alpha;
+	float peakOmega;
+	float angle;
 
 float hash(uint n) {
 	// integer hash copied from Hugo Elias

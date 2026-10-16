@@ -19,14 +19,18 @@ class FSpectrum : public FGlobalShader
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters,)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, OutputTexture)
 		SHADER_PARAMETER(float, scale)
-		SHADER_PARAMETER(float, angle)
 		SHADER_PARAMETER(float, spreadBlend)
 		SHADER_PARAMETER(float, swell)
-		SHADER_PARAMETER(float, alpha)
-		SHADER_PARAMETER(float, peakOmega)
 		SHADER_PARAMETER(float, gamma)
 		SHADER_PARAMETER(float, shortWavesFade)
+	
+		SHADER_PARAMETER(float, windSpeed)
+		SHADER_PARAMETER(float, windDirection)
+		SHADER_PARAMETER(float, fetch)
 
+		SHADER_PARAMETER(float, alpha)
+		SHADER_PARAMETER(float, peakOmega)
+		SHADER_PARAMETER(float, angle)
 	END_SHADER_PARAMETER_STRUCT()
 	
 
@@ -180,6 +184,9 @@ void WavesRender::DispatchRenderThread(FRHICommandListImmediate& RHICmdList, Spe
 	PassParameters->shortWavesFade = SpectrumParams.ShortWavesFade;
 	PassParameters->spreadBlend = SpectrumParams.SpreadBlend;
 	PassParameters->swell = SpectrumParams.Swell;
+	PassParameters->windSpeed = SpectrumParams.WindSpeed;
+	PassParameters->windDirection = SpectrumParams.WindDirection;
+	PassParameters->fetch = SpectrumParams.Fetch;
 	
 	//Get a reference to our shader type from global shader map
 	//Pass 1 (static initial spectrum texture)

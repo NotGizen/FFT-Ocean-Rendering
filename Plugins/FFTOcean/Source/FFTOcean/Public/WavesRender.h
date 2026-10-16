@@ -11,14 +11,18 @@ struct SpectrumParameters
 {
 	UTextureRenderTarget2D* RenderTarget;
 	float Scale;
-	float Angle;
 	float SpreadBlend;
 	float Swell;
-	float Alpha;
-	float PeakOmega;
 	float Gamma;
 	float ShortWavesFade;
+	float WindSpeed;
+	float WindDirection;
+	float Fetch;
 
+	float Angle;
+	float Alpha;
+	float PeakOmega;
+	
 	FIntVector2 GetRenderTargetSize() const
 	{
 		return CachedRenderTargetSize;
@@ -28,11 +32,12 @@ struct SpectrumParameters
 	{
 		
 	}
-	SpectrumParameters(UTextureRenderTarget2D* IORenderTarget, float InScale, float InAngle, float InSpreadBlend,
-	float InSwell, float InAlpha, float InPeakOmega, float InGamma, float InShortWavesFade)
+	SpectrumParameters(UTextureRenderTarget2D* IORenderTarget, float InScale, float InSpreadBlend,
+	float InSwell, float InGamma, float InShortWavesFade, float InWindSpeed, float InWindDirection, float InFetch, float InAlpha, float InPeakOmega, float InAngle)
 		: RenderTarget(IORenderTarget)
 	, Scale(InScale), Angle(InAngle), SpreadBlend(InSpreadBlend), Swell(InSwell)
-	, Alpha(InAlpha), PeakOmega(InPeakOmega), Gamma(InGamma), ShortWavesFade(InShortWavesFade)
+	, Alpha(InAlpha), PeakOmega(InPeakOmega), Gamma(InGamma), ShortWavesFade(InShortWavesFade),
+	WindSpeed(InWindSpeed), WindDirection(InWindDirection), Fetch(InFetch)
 	{
 		CachedRenderTargetSize = RenderTarget ? FIntVector2(RenderTarget->SizeX, RenderTarget->SizeY) : FIntVector2::ZeroValue;
 	}
