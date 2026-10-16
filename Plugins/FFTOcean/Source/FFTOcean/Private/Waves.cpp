@@ -11,21 +11,20 @@ AWaves::AWaves()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	TileSize = 1000.f; //this value is in cm so 100cm is 1m
 	
 	//Set default params
-	//wrong params
-	/*Scale = 1.0;
-	Alpha = 0.19f;
-	Angle = 0.f;
+	Scale = 1.0;
 	Gamma = 3.3f;
-	PeakOmega = 0.22f;
-	ShortWavesFade = 0.16f;
-	SpreadBlend = 0.35f;
-	Swell = 0.f; //can be 1.f*/
+	ShortWavesFade = 0.f;
+	SpreadBlend = 0.24f;
+	Swell = 0.f;
+
+	WindSpeed = 24.f;
+	WindDirection = 0.f;
+	Fetch = 7600.f;
 	
 	//Timethy parameters
-	Scale = 1.0;
+	/*Scale = 1.0;
 	Gamma = 3.3f;
 	ShortWavesFade = 0.85f;
 	SpreadBlend = 1.0f;
@@ -33,10 +32,14 @@ AWaves::AWaves()
 
 	WindSpeed = 50.f;
 	WindDirection = 0.f;
-	Fetch = 5000.f;
+	Fetch = 5000.f;*/
 	
 	//in a grid 10x10 (100) , it will have 10mx10m, make sure to match this with LENGHT_SCALE from shader
-	PerRowAmount = 10; 
+	PerRowAmount = 64; // 32x32 will give a total of 102,400 vertices
+	//this value is in cm so 100cm is 1m
+	TileSize = float(LENGHT_SCALE) * 100.f / PerRowAmount; 
+	
+	
 	USceneComponent* SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = SceneRoot;
 	int32 NameCounter = 0;
