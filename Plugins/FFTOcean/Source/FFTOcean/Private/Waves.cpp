@@ -33,30 +33,31 @@ AWaves::AWaves()
 	WindSpeed = 50.f;
 	WindDirection = 0.f;
 	Fetch = 5000.f;*/
+	//-----------------------
 	
+	//Old grid meshes
 	//in a grid 10x10 (100) , it will have 10mx10m, make sure to match this with LENGHT_SCALE from shader
-	PerRowAmount = 64; // 32x32 will give a total of 102,400 vertices
+	//PerRowAmount = 64; // 32x32 will give a total of 102,400 vertices
 	//this value is in cm so 100cm is 1m
-	TileSize = float(LENGHT_SCALE) * 100.f / PerRowAmount; 
+	//TileSize = float(LENGHT_SCALE) * 100.f / PerRowAmount; 
+	//---------------
 	
-	
+	//Setting up Ocean mesh
 	USceneComponent* SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = SceneRoot;
-	int32 NameCounter = 0;
+	FName CompName = FName(*FString::Printf(TEXT("OceanMesh")));
+	OceanMesh = CreateDefaultSubobject<UProceduralMeshComponent>(CompName);
+	OceanMesh->SetupAttachment(RootComponent);
+	OceanMesh->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
 	
-	for (int32 i = 0; i < PerRowAmount; ++i)
-	{
-		for (int32 j = 0; j < PerRowAmount; ++j)
-		{
-			
-			FName CompName = FName(*FString::Printf(TEXT("ProceduralMeshComponent_%d"), NameCounter));
-			UProceduralMeshComponent* MeshComp = CreateDefaultSubobject<UProceduralMeshComponent>(CompName);
-			MeshComp->SetupAttachment(RootComponent);
-			MeshComp->SetRelativeLocation(FVector(i * TileSize, j * TileSize, 0.0f));
-			CreateGrid(TileSize, i, j, MeshComp);
-			NameCounter++;
-		}
-	}
+	//Setting up the ocean grid
+	OceanSize = FVector2f(1024.f, 1024.f);
+	OceanSubDivision = FUintVector2(512, 512);
+	OceanSize *= 100; //Converting UE cm to meters so that it matches the lenght for the ocean in shaders
+
+	
+	CreateGrid(OceanSize, OceanSubDivision);
+
 	
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> OceanMatFinder(
 		TEXT("/FFTOcean/M_Waves.M_Waves"));  // adjust to your actual asset path
@@ -94,40 +95,76 @@ void AWaves::BeginPlay()
 	Slope->UpdateResourceImmediate();
 	
 	PreSlope = NewObject<UTextureRenderTarget2D>(this);
-    	PreSlope->RenderTargetFormat = RTF_RGBA16f;
-    	PreSlope->bCanCreateUAV = true;
-    	PreSlope->InitAutoFormat(TEX_SIZE, TEX_SIZE);
-    	PreSlope->UpdateResourceImmediate();
+    PreSlope->RenderTargetFormat = RTF_RGBA16f;
+    PreSlope->bCanCreateUAV = true;
+    PreSlope->InitAutoFormat(TEX_SIZE, TEX_SIZE);
+    PreSlope->UpdateResourceImmediate();
 	
 	OceanDynMat = UMaterialInstanceDynamic::Create(OceanBaseMat, this);
 	OceanDynMat->SetTextureParameterValue(FName("DisplacementTexture"), Displacement);
 	OceanDynMat->SetTextureParameterValue(FName("SlopeTexture"), Slope);
 	
-	for (UProceduralMeshComponent* Tile : Meshes)
-	{
-		Tile->SetMaterial(0, OceanDynMat);
-		UE_LOG(LogTemp, Warning, TEXT("Set material on tile: %s"), *Tile->GetName());
-	}
+	
+	OceanMesh->SetMaterial(0, OceanDynMat);
+	UE_LOG(LogTemp, Warning, TEXT("Set material on OceanGrid"));
+
 }
 
-void AWaves::CreateGrid(float tileSize, int32 x, int32 y, UProceduralMeshComponent*& mesh)
+void AWaves::CreateGrid(FVector2f size, FUintVector2 subDivision)
 {
 	
-	
+	float halfWidth = size.X * 0.5f;
+	float halfDepth = size.Y * 0.5f;
+
+	float dx = size.X / subDivision.X;
+	float dy = size.Y / subDivision.Y;
+
+	float du = 1.0f / subDivision.X;
+	float dv = 1.0f / subDivision.Y;
+
+	//Filling Vertices and TexCoords
 	TArray<FVector> Vertices;
-	Vertices.Add(FVector(0.0f , 0.0f, 0.0f));
-	Vertices.Add(FVector(0.0f , tileSize , 0.0f));
-	Vertices.Add(FVector(tileSize , 0.0f , 0.0f));
-	Vertices.Add(FVector(tileSize , tileSize , 0.0f));
+	TArray<FVector2D> UVs;
 	
-	TArray<int32> Triangles;
-	Triangles.Add(0);
-	Triangles.Add(1);
-	Triangles.Add(2);
+	for (uint32_t i = 0; i <= subDivision.Y; ++i)
+	{
+		float y = -halfDepth + i * dy;
+		float v = (float)i * dv;
+
+		for (uint32_t j = 0; j <= subDivision.X; ++j)
+		{
+			float x = -halfWidth + j * dx;
+			float u = (float)j * du;
+			
+			Vertices.Add(FVector(x, y, 0.f));
+			UVs.Add(FVector2D(u, v));
+		}
+	}
 	
-	Triangles.Add(2);
-	Triangles.Add(1);
-	Triangles.Add(3);
+	TArray<int32> Indices;
+	
+	UINT32 stride = subDivision.X + 1;
+
+	for (UINT32 i = 0; i < subDivision.Y; ++i)
+	{
+		for (UINT32 j = 0; j < subDivision.X; ++j)
+		{
+			UINT32 bottomLeft = i * stride + j;
+			UINT32 bottomRight = bottomLeft + 1;
+			UINT32 topLeft = (i + 1) * stride + j;
+			UINT32 topRight = topLeft + 1;
+			
+			//First triangle
+			Indices.Add(bottomLeft);
+			Indices.Add(topLeft);
+			Indices.Add(bottomRight);
+			
+			//Second triangle
+			Indices.Add(bottomRight);
+			Indices.Add(topLeft);
+			Indices.Add(topRight);
+		}
+	}
 	
 	TArray<FVector> Normals;
 	for (int32 i = 0; i < Vertices.Num(); ++i)
@@ -135,17 +172,6 @@ void AWaves::CreateGrid(float tileSize, int32 x, int32 y, UProceduralMeshCompone
 		Normals.Add(FVector(0, 0, 1)); 
 	}
 	
-	//UV
-	float U0 = (float)x / PerRowAmount;
-	float U1 = (float)(x + 1) / PerRowAmount;
-	float V0 = (float)y / PerRowAmount;
-	float V1 = (float)(y + 1) / PerRowAmount;
-
-	TArray<FVector2D> UVs;
-	UVs.Add(FVector2D(U0, V0));  // vertex 0: (0,0) corner
-	UVs.Add(FVector2D(U0, V1));  // vertex 1: (0,tileSize) corner
-	UVs.Add(FVector2D(U1, V0));  // vertex 2: (tileSize,0) corner
-	UVs.Add(FVector2D(U1, V1));  // vertex 3: (tileSize,tileSize) corner
 	
 	TArray<FColor> Colors;
 	Colors.Add(FColor(255, 0, 0, 255));
@@ -153,12 +179,10 @@ void AWaves::CreateGrid(float tileSize, int32 x, int32 y, UProceduralMeshCompone
 	Colors.Add(FColor(0, 0, 255, 255));
 	Colors.Add(FColor(255, 255, 0, 255));
 	
-	if (mesh)
+	if (OceanMesh)
 	{
-		mesh->ClearAllMeshSections();
-		mesh->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, Colors, TArray<FProcMeshTangent>(), false);
-
-		Meshes.Add(mesh);
+		OceanMesh->ClearAllMeshSections();
+		OceanMesh->CreateMeshSection(0, Vertices, Indices, Normals, UVs, Colors, TArray<FProcMeshTangent>(), false);
 	}
 	
 }

@@ -20,7 +20,7 @@
 		},
 		{
 			"Name": "Water",
-			"Enabled": false
+			"Enabled": true
 		},
 		{
 			"Name": "TriangleTest",

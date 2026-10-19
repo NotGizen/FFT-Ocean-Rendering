@@ -46,7 +46,7 @@ float2 UniformToGaussian(float u1, float u2) {
 }
 
 float Dispersion(float kMag) {
-    return sqrt(kMag * tanh(min(kMag * DEPTH, 20)));
+    return sqrt(GRAVITY * kMag * tanh(min(kMag * DEPTH, 20)));
 }
 
 float DispersionDerivative(float kMag) {

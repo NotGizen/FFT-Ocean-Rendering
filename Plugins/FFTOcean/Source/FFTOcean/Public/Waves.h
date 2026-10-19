@@ -23,18 +23,19 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	//UStaticMeshComponent* VisualMesh;
+
 	UPROPERTY(EditAnywhere)
-	TArray<UProceduralMeshComponent*> Meshes;
+	UProceduralMeshComponent* OceanMesh;
 	
 	UPROPERTY(EditAnywhere)
 	float TileSize;
 	
-	UPROPERTY(EditAnywhere)
-	int32 PerRowAmount;
+	FVector2f OceanSize;
+	FUintVector2 OceanSubDivision; //Divides the ocean size into simetrical tiles
 	
 	
-	void CreateGrid(float tileSize, int32 x, int32 y, UProceduralMeshComponent*& mesh);
+	
+	void CreateGrid(FVector2f totalSize, FUintVector2 subDivision);
 	
 	//Spectrum parameters fucntions
 	float JonswapAlpha(float fetch, float windspeed);

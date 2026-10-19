@@ -1,6 +1,6 @@
 #pragma once
 
-#define LENGHT_SCALE 100 //10 - modified this to match the 10x10 mesh
+#define LENGHT_SCALE 1024
 #define TEX_SIZE 512
 #define LOG_SIZE 9 // change accordingly to Tex_Size , so 8 = 256x256, 9 = 512x512
 #define GRAVITY 9.81f
