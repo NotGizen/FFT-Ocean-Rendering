@@ -11,7 +11,7 @@
 #define HIGHCUTOFF 9000.0f
 #define DEPTH 500.f
 
-#define REPEAT_TIME 100.f //[0.f, 200.f]
+#define REPEAT_TIME 500.f //[0.f, 200.f]
 
 //LastPass
 #define LAMBDA float2(1.0f, 1.0f)
@@ -317,16 +317,33 @@ void AssembleMapsCS(uint3 id : SV_DISPATCHTHREADID) {
 		float2 dydxz = htildeDisplacement.ba;
 		float2 dyxdyz = htildeSlope.rg;
 		float2 dxxdzz = htildeSlope.ba;
+	
+	float2 lambda = LAMBDA;
         
-		
+		float jacobian = (1.0f + lambda.x * dxxdzz.x) * (1.0f + lambda.y * dxxdzz.y) - lambda.x * lambda.y * dydxz.y * dydxz.y;
 
-		float3 displacement = float3(LAMBDA.x * dxdz.x, dydxz.x, LAMBDA.y * dxdz.y);
+		float3 displacement = float3(lambda.x * dxdz.x, dydxz.x, lambda.y * dxdz.y);
 
-		float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * LAMBDA));
-		
+		float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * lambda));
+		float covariance = slopes.x * slopes.y;
 		
 	//Fill in foam variable
-		float foam = 1.f;
+	float foam = DisplacementTexture[id.xy].a;
+	float foamDecayRate = 0.7f; //make into tweakable var
+	foam *= exp(-foamDecayRate);
+	foam = saturate(foam);
+	
+	float foamBias = 0.5f; // make into tweakable var
+	float biasedJacobian = max(0.0f, -(jacobian - foamBias));
+	
+	float foamAdd = 2.f; // make into tweakable var
+	float foamThreshold = 0.f; // make into tweakable var
+	
+	if (biasedJacobian > foamThreshold)
+		foam += foamAdd * biasedJacobian;
+
+	
+		//float foam = 1.f;
 		DisplacementTexture[id.xy] = float4(displacement, foam);
 		SlopeTexture[id] = slopes;
 		//SlopeTexture[id.xy] = float4(slopes.x, slopes.y, 0.f, 1.f);

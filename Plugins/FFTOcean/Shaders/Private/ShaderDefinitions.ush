@@ -1,6 +1,6 @@
 #pragma once
 
-#define LENGHT_SCALE 1024
+#define LENGHT_SCALE 512
 #define TEX_SIZE 512
 #define LOG_SIZE 9 // change accordingly to Tex_Size , so 8 = 256x256, 9 = 512x512
 #define GRAVITY 9.81f

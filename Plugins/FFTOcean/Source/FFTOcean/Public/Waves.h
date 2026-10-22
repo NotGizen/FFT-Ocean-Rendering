@@ -85,6 +85,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  10000.f))
 	float Fetch; //[0.0f, 10000.0f]
 	
+	//UPROPERTY(EditAnywhere, Category = "Ocean Params", Meta = (ClampMin = 0.f, ClampMax =  500.f))
+	//float RepeatTime; //[0.0f, 500.0f]
+	
+
 	//Non-modifiable values
 	UPROPERTY(VisibleAnywhere, Category = "Ocean Params")
 	float Angle;

@@ -23,6 +23,8 @@ AWaves::AWaves()
 	WindDirection = 0.f;
 	Fetch = 7600.f;
 	
+	//RepeatTime = 200.f;
+	
 	//Timethy parameters
 	/*Scale = 1.0;
 	Gamma = 3.3f;
