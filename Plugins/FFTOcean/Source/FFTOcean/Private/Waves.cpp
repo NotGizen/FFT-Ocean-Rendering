@@ -81,24 +81,32 @@ void AWaves::BeginPlay()
 	HeightField = NewObject<UTextureRenderTarget2D>(this);
 	HeightField->RenderTargetFormat = RTF_RGBA16f;
 	HeightField->bCanCreateUAV = true;
+	HeightField->AddressX = TA_Wrap;
+	HeightField->AddressY = TA_Wrap;
 	HeightField->InitAutoFormat(TEX_SIZE, TEX_SIZE);
 	HeightField->UpdateResourceImmediate();
 	
 	Displacement = NewObject<UTextureRenderTarget2D>(this);
 	Displacement->RenderTargetFormat = RTF_RGBA16f;
 	Displacement->bCanCreateUAV = true;
+	Displacement->AddressX = TA_Wrap;
+	Displacement->AddressY = TA_Wrap;
 	Displacement->InitAutoFormat(TEX_SIZE, TEX_SIZE);
 	Displacement->UpdateResourceImmediate();
 	
 	Slope = NewObject<UTextureRenderTarget2D>(this);
 	Slope->RenderTargetFormat = RTF_RGBA16f;
 	Slope->bCanCreateUAV = true;
+	Slope->AddressX = TA_Wrap;
+	Slope->AddressY = TA_Wrap;
 	Slope->InitAutoFormat(TEX_SIZE, TEX_SIZE);
 	Slope->UpdateResourceImmediate();
 	
 	PreSlope = NewObject<UTextureRenderTarget2D>(this);
     PreSlope->RenderTargetFormat = RTF_RGBA16f;
     PreSlope->bCanCreateUAV = true;
+	PreSlope->AddressX = TA_Wrap;
+	PreSlope->AddressY = TA_Wrap;
     PreSlope->InitAutoFormat(TEX_SIZE, TEX_SIZE);
     PreSlope->UpdateResourceImmediate();
 	

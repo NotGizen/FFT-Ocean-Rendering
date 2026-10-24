@@ -12,14 +12,7 @@
     <option name="flavorId" value="CMakePlainProjectFlavor" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3395228a-41bd-45bf-bb40-686f1731ef00" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.OceanSimulator/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.OceanSimulator/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Plugins/FFTOcean/Content/M_Waves.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/FFTOcean/Content/M_Waves.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Plugins/FFTOcean/Shaders/Private/FFTWaves.usf" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/FFTOcean/Shaders/Private/FFTWaves.usf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Plugins/FFTOcean/Shaders/Private/ShaderDefinitions.ush" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/FFTOcean/Shaders/Private/ShaderDefinitions.ush" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Plugins/FFTOcean/Source/FFTOcean/Private/Waves.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/FFTOcean/Source/FFTOcean/Private/Waves.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Plugins/FFTOcean/Source/FFTOcean/Public/Waves.h" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/FFTOcean/Source/FFTOcean/Public/Waves.h" afterDir="false" />
-    </list>
+    <list default="true" id="3395228a-41bd-45bf-bb40-686f1731ef00" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -194,7 +187,7 @@
       <workItem from="1792154411552" duration="19670000" />
       <workItem from="1792324390963" duration="1277000" />
       <workItem from="1792407101595" duration="11588000" />
-      <workItem from="1792677733428" duration="5144000" />
+      <workItem from="1792677733428" duration="5202000" />
     </task>
     <servers />
   </component>
