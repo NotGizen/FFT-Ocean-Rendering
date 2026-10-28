@@ -208,8 +208,8 @@ void TimeEvolutionCS(uint3 id : SV_DispatchThreadID)
 
 		float2 exponent = EulerFormula(dispersion);
 
-		//float2 htilde = (h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
-	float2 htilde = ComplexMult(h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
+		float2 htilde = ComplexMult(h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
+	
 		float2 ih = float2(-htilde.y, htilde.x);
 
 		float2 displacementX = ih * K.x * kMagRcp;
@@ -329,8 +329,8 @@ void AssembleMapsCS(uint3 id : SV_DISPATCHTHREADID) {
 		
 	//Fill in foam variable
 	//float foam = DisplacementTexture[id.xy].a;
-	float foamBias = 0.6f;   // foam where jacobian < foamBias
-	float foamGain = 2.3f;   // how fast foam reaches full strength
+	float foamBias = 1.f;   // foam where jacobian < foamBias
+	float foamGain = 2.f;   // how fast foam reaches full strength
 	float foam = saturate((foamBias - jacobian) * foamGain);
 	
 		//float foam = 1.f;

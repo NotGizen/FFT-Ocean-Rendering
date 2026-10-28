@@ -12,7 +12,10 @@
     <option name="flavorId" value="CMakePlainProjectFlavor" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3395228a-41bd-45bf-bb40-686f1731ef00" name="Changes" comment="" />
+    <list default="true" id="3395228a-41bd-45bf-bb40-686f1731ef00" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/Plugins/FFTOcean/Shaders/Private/FFTWaves.usf" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/FFTOcean/Shaders/Private/FFTWaves.usf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plugins/FFTOcean/Source/FFTOcean/Private/Waves.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/FFTOcean/Source/FFTOcean/Private/Waves.cpp" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

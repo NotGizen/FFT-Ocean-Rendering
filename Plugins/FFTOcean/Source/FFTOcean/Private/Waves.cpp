@@ -7,8 +7,8 @@
 #include "../Shaders/Private/ShaderDefinitions.ush"
 #include "Engine/TextureRenderTarget2D.h"
 // Sets default values
-AWaves::AWaves()
-{
+	AWaves::AWaves()
+	{
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
@@ -120,82 +120,82 @@ void AWaves::BeginPlay()
 
 }
 
-void AWaves::CreateGrid(FVector2f size, FUintVector2 subDivision)
-{
-	
-	float halfWidth = size.X * 0.5f;
-	float halfDepth = size.Y * 0.5f;
-
-	float dx = size.X / subDivision.X;
-	float dy = size.Y / subDivision.Y;
-
-	float du = 1.0f / subDivision.X;
-	float dv = 1.0f / subDivision.Y;
-
-	//Filling Vertices and TexCoords
-	TArray<FVector> Vertices;
-	TArray<FVector2D> UVs;
-	
-	for (uint32_t i = 0; i <= subDivision.Y; ++i)
+	void AWaves::CreateGrid(FVector2f size, FUintVector2 subDivision)
 	{
-		float y = -halfDepth + i * dy;
-		float v = (float)i * dv;
+		
+		float halfWidth = size.X * 0.5f;
+		float halfDepth = size.Y * 0.5f;
 
-		for (uint32_t j = 0; j <= subDivision.X; ++j)
+		float dx = size.X / subDivision.X;
+		float dy = size.Y / subDivision.Y;
+
+		float du = 1.0f / subDivision.X;
+		float dv = 1.0f / subDivision.Y;
+
+		//Filling Vertices and TexCoords
+		TArray<FVector> Vertices;
+		TArray<FVector2D> UVs;
+		
+		for (uint32_t i = 0; i <= subDivision.Y; ++i)
 		{
-			float x = -halfWidth + j * dx;
-			float u = (float)j * du;
-			
-			Vertices.Add(FVector(x, y, 0.f));
-			UVs.Add(FVector2D(u, v));
-		}
-	}
-	
-	TArray<int32> Indices;
-	
-	UINT32 stride = subDivision.X + 1;
+			float y = -halfDepth + i * dy;
+			float v = (float)i * dv;
 
-	for (UINT32 i = 0; i < subDivision.Y; ++i)
-	{
-		for (UINT32 j = 0; j < subDivision.X; ++j)
-		{
-			UINT32 bottomLeft = i * stride + j;
-			UINT32 bottomRight = bottomLeft + 1;
-			UINT32 topLeft = (i + 1) * stride + j;
-			UINT32 topRight = topLeft + 1;
-			
-			//First triangle
-			Indices.Add(bottomLeft);
-			Indices.Add(topLeft);
-			Indices.Add(bottomRight);
-			
-			//Second triangle
-			Indices.Add(bottomRight);
-			Indices.Add(topLeft);
-			Indices.Add(topRight);
+			for (uint32_t j = 0; j <= subDivision.X; ++j)
+			{
+				float x = -halfWidth + j * dx;
+				float u = (float)j * du;
+				
+				Vertices.Add(FVector(x, y, 0.f));
+				UVs.Add(FVector2D(u, v));
+			}
 		}
+		
+		TArray<int32> Indices;
+		
+		UINT32 stride = subDivision.X + 1;
+
+		for (UINT32 i = 0; i < subDivision.Y; ++i)
+		{
+			for (UINT32 j = 0; j < subDivision.X; ++j)
+			{
+				UINT32 bottomLeft = i * stride + j;
+				UINT32 bottomRight = bottomLeft + 1;
+				UINT32 topLeft = (i + 1) * stride + j;
+				UINT32 topRight = topLeft + 1;
+				
+				//First triangle
+				Indices.Add(bottomLeft);
+				Indices.Add(topLeft);
+				Indices.Add(bottomRight);
+				
+				//Second triangle
+				Indices.Add(bottomRight);
+				Indices.Add(topLeft);
+				Indices.Add(topRight);
+			}
+		}
+		
+		TArray<FVector> Normals;
+		for (int32 i = 0; i < Vertices.Num(); ++i)
+		{
+			Normals.Add(FVector(0, 0, 1)); 
+		}
+		
+		
+		TArray<FColor> Colors;
+		Colors.Add(FColor(255, 0, 0, 255));
+		Colors.Add(FColor(0, 255, 0, 255));	
+		Colors.Add(FColor(0, 0, 255, 255));
+		Colors.Add(FColor(255, 255, 0, 255));
+		
+		if (OceanMesh)
+		{
+			OceanMesh->ClearAllMeshSections();
+			OceanMesh->CreateMeshSection(0, Vertices, Indices, Normals, UVs, Colors, TArray<FProcMeshTangent>(), false);
+		}
+		
 	}
-	
-	TArray<FVector> Normals;
-	for (int32 i = 0; i < Vertices.Num(); ++i)
-	{
-		Normals.Add(FVector(0, 0, 1)); 
-	}
-	
-	
-	TArray<FColor> Colors;
-	Colors.Add(FColor(255, 0, 0, 255));
-	Colors.Add(FColor(0, 255, 0, 255));	
-	Colors.Add(FColor(0, 0, 255, 255));
-	Colors.Add(FColor(255, 255, 0, 255));
-	
-	if (OceanMesh)
-	{
-		OceanMesh->ClearAllMeshSections();
-		OceanMesh->CreateMeshSection(0, Vertices, Indices, Normals, UVs, Colors, TArray<FProcMeshTangent>(), false);
-	}
-	
-}
 
 float AWaves::JonswapAlpha(float fetch, float windSpeed)
 {
